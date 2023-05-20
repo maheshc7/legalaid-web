@@ -3,8 +3,8 @@ import React, { useState } from "react";
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { ThemeProvider } from '@mui/material/styles';
-import { TextField, IconButton, Stack, Grid } from '@mui/material';
-import { Delete as DeleteIcon, CheckCircle as CheckIcon, ModeEdit as EditIcon } from '@mui/icons-material';
+import { TextField, Stack, Grid } from '@mui/material';
+import EDButton from './EditDeleteButtonControl';
 import theme from "../styles/Theme";
 
 export default function EventDetail({ entry }) {
@@ -12,18 +12,6 @@ export default function EventDetail({ entry }) {
   const [subject, setSubject] = useState(entry.subject);
   const [date, setDate] = useState(entry.date);
   const [description, setDescription] = useState(entry.description);
-
-  const handleEditClick = () => {
-    setIsEditable(true);
-  };
-
-  const handleSaveClick = () => {
-    setIsEditable(false);
-  };
-
-  const handleDeleteClick = () => {
-    // perform delete logic here
-  };
 
   return (
     <ThemeProvider theme={theme}>
@@ -53,19 +41,8 @@ export default function EventDetail({ entry }) {
             </Grid>
             <Grid xs={4} md={4} lg={4} paddingTop={2}>
             <Stack direction="row" justifyContent="end">
-              {isEditable ? (
-                <IconButton aria-label="save" color="success" onClick={handleSaveClick}>
-                  <CheckIcon />
-                </IconButton>
-              ) : (
-                <IconButton aria-label="edit" color="neutral" onClick={handleEditClick}>
-                  <EditIcon />
-                </IconButton>
-              )}
-              <IconButton aria-label="delete" color="error" onClick={handleDeleteClick}>
-                <DeleteIcon />
-              </IconButton>
-              </Stack>
+              <EDButton isEditable={isEditable} setIsEditable={setIsEditable}/>
+            </Stack>
             </Grid>
           </Grid>
           <Grid xs={12} md={12} lg={12}>
