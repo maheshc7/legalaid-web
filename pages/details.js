@@ -8,8 +8,10 @@ import { useAppContext } from "../context/AppContext";
 import Layout from '../components/layout';
 import Head from 'next/head';
 import theme from "../styles/Theme";
+import { useRouter } from 'next/router';
 
 export default function Main({}) {
+  const router = useRouter();
   const [selectedFile, setSelectedFile] = useAppContext();
     const entries = [
         { subject: "Entry 1",date:"1998-06-28", description: "Description 1" },
