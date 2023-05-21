@@ -15,7 +15,7 @@ export async function uploadFile(file) {
     });
 
     if (response.status === 201) {
-      return response.data;
+      return response.data.taskID;
     } else {
       throw new Error('Failed to upload file');
     }

@@ -9,10 +9,11 @@ export default function Home() {
   const router = useRouter();
   const [selectedFile, setSelectedFile] = useAppContext();
 
-  const handleUploadFile = async() => {
-    const taskId = await uploadFile(selectedFile);
-    console.log(taskId);
-    router.push("/details");
+  const handleUploadFile = () => {
+    uploadFile(selectedFile).then((taskId) => {
+      console.log(taskId);
+      router.push({pathname:"/details", query: {taskId: taskId}});
+    });
     }
 
   return (
