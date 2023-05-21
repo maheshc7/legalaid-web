@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { ThemeProvider } from '@mui/material/styles';
-import { TextField, Stack, Grid } from '@mui/material';
+import { TextField, Stack} from '@mui/material';
+import Grid from '@mui/material/Unstable_Grid2';
 import EDButton from './EditDeleteButtonControl';
 import theme from "../styles/Theme";
 
@@ -16,7 +17,7 @@ export default function EventDetail({ entry }) {
   return (
     <ThemeProvider theme={theme}>
         <Grid container flexDirection={"row"}>
-          <Grid container xs={12} flexDirection={"row"}>
+          <Grid container flexDirection={"row"}>
             <Grid xs={8} md={8} lg={8}>
               <Stack spacing={1.5}>
                 <TextField
@@ -53,7 +54,7 @@ export default function EventDetail({ entry }) {
               margin="normal"
               size ="small"
               label="Description"
-              fullWidth="true"
+              fullWidth={true}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               disabled={!isEditable}

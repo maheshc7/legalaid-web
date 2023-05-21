@@ -2,6 +2,7 @@ import React, {useState} from "react";
 import Stack from '@mui/material/Stack';
 import TextField  from '@mui/material/TextField';
 import EDButton from "./EditDeleteButtonControl";
+import { Typography } from "@mui/material";
 
 export default function CaseDetails({ caseDetail }) {
 
@@ -13,8 +14,8 @@ export default function CaseDetails({ caseDetail }) {
 
     return(
         <>
-            <Stack direction="row" justifyContent="space-between">
-                <h2>Case Details</h2>
+            <Stack direction="row" justifyContent="space-between" sx={{pl:2, pr:1}}>
+                <Typography variant="h6" color={"grey.700"} gutterBottom>Case Details</Typography>
                 <EDButton isEditable={isEditable} setIsEditable={setIsEditable} showDelete={false}/>
             </Stack>
 

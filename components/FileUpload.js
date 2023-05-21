@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from 'next/router';
 import { Box, Button, Container, Typography } from "@mui/material";
 import { styled } from "@mui/system";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
@@ -41,8 +40,7 @@ const SelectFileButton = styled(Button)({
   zIndex: 1,
 });
 
-function FileUpload({}) {
-  const router = useRouter();
+function FileUpload({onUpload}) {
   const [selectedFile, setSelectedFile] = useAppContext();
   const [error, setError] = useState("");
 
@@ -59,7 +57,7 @@ function FileUpload({}) {
 
   const handleUploadFile = () => {
     if (selectedFile) {
-      router.push("/details")
+      onUpload();
     } else {
       setError("Please select a PDF file.");
     }

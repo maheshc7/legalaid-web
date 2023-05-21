@@ -56,7 +56,7 @@ export default function Main({}) {
                   )}
                 />
                 
-                <Box border={"1px dashed grey"} padding={1}> 
+                <Box border={1} borderColor={"grey.400"} borderRadius={1.5} padding={1}> 
                   {/* component="fieldset" <legend>Case Details</legend> */}
                   <CaseDetails caseDetail={caseDetail}/>
                 </Box>
