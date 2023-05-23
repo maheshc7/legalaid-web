@@ -17,8 +17,8 @@ export default function EventDetail({ entry }) {
   return (
     <ThemeProvider theme={theme}>
         <Grid container flexDirection={"row"}>
-          <Grid container flexDirection={"row"}>
-            <Grid xs={8} md={8} lg={8}>
+          <Grid container xs={12} flexDirection={"row"}>
+            <Grid xs={8} md={8} lg={8} >
               <Stack spacing={1.5}>
                 <TextField
                   label="Subject"
@@ -40,7 +40,7 @@ export default function EventDetail({ entry }) {
                 </LocalizationProvider>
               </Stack>
             </Grid>
-            <Grid xs={4} md={4} lg={4} paddingTop={2}>
+            <Grid xs={4} md={4} lg={4} paddingTop={2} >
             <Stack direction="row" justifyContent="end">
               <EDButton isEditable={isEditable} setIsEditable={setIsEditable}/>
             </Stack>
