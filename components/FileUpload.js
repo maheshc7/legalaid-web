@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, Button, Container, Typography } from "@mui/material";
+import { Box, Button, Container, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/system";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { useAppContext } from "../context/AppContext";
@@ -11,9 +11,10 @@ const FileInput = styled("input")({
 
 const DropZone = styled(Box)({
   border: "4px dashed rgba(0, 0, 0, 0.2)",
+  background: "#EFF7FF",
   borderRadius: "8px",
   cursor: "pointer",
-  height: "180px",
+  height: "280px",
   marginBottom: "32px",
   position: "relative",
   textAlign: "center",
@@ -35,6 +36,15 @@ const SelectFileButton = styled(Button)({
   color: "#fff",
   position: "absolute",
   top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  zIndex: 1,
+});
+
+const DropText = styled(Typography)({
+  color: "grey",
+  position: "absolute",
+  top: "65%",
   left: "50%",
   transform: "translate(-50%, -50%)",
   zIndex: 1,
@@ -87,7 +97,7 @@ function FileUpload({onUpload}) {
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        height: "100vh",
+        height: "70vh",
         justifyContent: "center",
       }}
     >
@@ -119,12 +129,15 @@ function FileUpload({onUpload}) {
             {selectedFile.name}
           </Typography>
         ) : (
-          <SelectFileButton
-            variant="contained"
-            startIcon={<CloudUploadIcon />}
-            size="large">
-            Select a PDF file
-          </SelectFileButton>
+          <>
+            <SelectFileButton
+              variant="contained"
+              startIcon={<CloudUploadIcon />}
+              size="large">
+              Select a PDF file
+            </SelectFileButton>
+            <DropText>or drop file here</DropText>
+              </>
           )}
         </DropZone>
         {error && <ErrorMessage>{error}</ErrorMessage>}

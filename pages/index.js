@@ -4,6 +4,8 @@ import Layout, { siteTitle } from '../components/layout';
 import FileUpload from '../components/FileUpload';
 import { uploadFile } from '../utils/apiHelpers';
 import { useAppContext } from "../context/AppContext";
+import { ThemeProvider } from '@mui/material/styles';
+import theme from "../styles/Theme";
 
 export default function Home() {
   const router = useRouter();
@@ -18,10 +20,12 @@ export default function Home() {
 
   return (
     <Layout home>
+      <ThemeProvider theme={theme}>
       <Head>
         <title>{siteTitle}</title>
       </Head>
       <FileUpload onUpload={handleUploadFile}/>
+      </ThemeProvider>
     </Layout>
   );
 }

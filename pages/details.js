@@ -51,8 +51,8 @@ export default function Main({}) {
             <title>Order Detail</title>
           </Head>
         <ThemeProvider theme={theme}>
-        <Grid container spacing={1} marginTop={5} padding={2}>
-          <Grid sm={12} md={12} lg={6}>
+        <Grid container spacing={1} padding={2}>
+          <Grid sm={12} md={12} lg={6} style={{ minHeight: '700px' }}>
             {selectedFile && <embed src={URL.createObjectURL(selectedFile)} type="application/pdf" title={selectedFile.name} width="100%" height="100%" />}
           </Grid>
            
