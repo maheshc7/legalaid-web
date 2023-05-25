@@ -2,11 +2,9 @@ import dayjs from 'dayjs';
 import React, { useState } from "react";
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { ThemeProvider } from '@mui/material/styles';
-import { TextField, Stack} from '@mui/material';
+import { TextField, Stack, useTheme} from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import EDButton from './EditDeleteButtonControl';
-import theme from "../styles/Theme";
 
 export default function EventDetail({ entry }) {
   const [isEditable, setIsEditable] = useState(false);
@@ -15,7 +13,6 @@ export default function EventDetail({ entry }) {
   const [description, setDescription] = useState(entry.description);
 
   return (
-    <ThemeProvider theme={theme}>
         <Grid container flexDirection={"row"}>
           <Grid container xs={12} flexDirection={"row"}>
             <Grid xs={8} md={8} lg={8} >
@@ -61,6 +58,5 @@ export default function EventDetail({ entry }) {
             />
           </Grid>
         </Grid>
-    </ThemeProvider>
   );
 };

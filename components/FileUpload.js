@@ -21,7 +21,7 @@ const DropZone = styled(Box)({
   width: "100%",
 
   "&:hover": {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: "#a3d1ff",
   },
 });
 
@@ -32,7 +32,6 @@ const ErrorMessage = styled(Typography)({
 });
 
 const SelectFileButton = styled(Button)({
-  backgroundColor: "#3F51B5",
   color: "#fff",
   position: "absolute",
   top: "50%",

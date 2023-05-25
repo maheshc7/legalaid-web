@@ -1,4 +1,3 @@
-import { ThemeProvider } from '@mui/material/styles';
 import Grid from '@mui/material/Unstable_Grid2';
 import { Box, TextField, Button, Stack } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
@@ -7,7 +6,6 @@ import EventDetail from "../components/EventDetail";
 import { useAppContext } from "../context/AppContext";
 import Layout from '../components/layout';
 import Head from 'next/head';
-import theme from "../styles/Theme";
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { getEvents, getCaseDetails } from '../utils/apiHelpers';
@@ -50,7 +48,6 @@ export default function Main({}) {
           <Head>
             <title>Order Detail</title>
           </Head>
-        <ThemeProvider theme={theme}>
         <Grid container spacing={1} padding={2}>
           <Grid sm={12} md={12} lg={6} style={{ minHeight: '700px' }}>
             {selectedFile && <embed src={URL.createObjectURL(selectedFile)} type="application/pdf" title={selectedFile.name} width="100%" height="100%" />}
@@ -94,8 +91,6 @@ export default function Main({}) {
         <Button variant="outlined" onClick={()=>router.push("/")}>New File</Button>
         <Button variant="contained">Create Events</Button>
         </Stack>
-
-        </ThemeProvider>
         </Layout>
       )
   };
