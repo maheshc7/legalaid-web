@@ -5,7 +5,7 @@ import Autocomplete from '@mui/material/Autocomplete';
 import CaseDetails from '../components/CaseDetail';
 import EventDetail from "../components/EventDetail";
 import { useAppContext } from "../context/AppContext";
-import Layout from '../components/layout';
+import Layout from '../components/Layout';
 import Head from 'next/head';
 import theme from "../styles/Theme";
 import { useRouter } from 'next/router';
@@ -37,7 +37,7 @@ export default function Main({}) {
         <ThemeProvider theme={theme}>
         <Grid container spacing={1} marginTop={5} padding={2}>
           <Grid sm={12} md={12} lg={6}>
-            <embed src={URL.createObjectURL(selectedFile)} type="application/pdf" title={selectedFile.name} width="100%" height="100%" />
+            {selectedFile && <embed src={URL.createObjectURL(selectedFile)} type="application/pdf" title={selectedFile.name} width="100%" height="100%" />}
           </Grid>
            
           <Grid xs={3}>

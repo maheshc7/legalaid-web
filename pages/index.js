@@ -1,14 +1,14 @@
 import Head from 'next/head';
-import Layout, { siteTitle } from '../components/layout';
 import FileUpload from '../components/FileUpload';
+import Layout, { siteTitle } from '../components/Layout';
 
 export default function Home() {
   return (
-    <Layout home>
+    <Layout>
       <Head>
         <title>{siteTitle}</title>
       </Head>
       <FileUpload/>
-    </Layout>
+      </Layout>
   );
 }
