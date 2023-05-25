@@ -5,7 +5,7 @@ import Autocomplete from '@mui/material/Autocomplete';
 import CaseDetails from '../components/CaseDetail';
 import EventDetail from "../components/EventDetail";
 import { useAppContext } from "../context/AppContext";
-import Layout from '../components/Layout';
+import Layout from '../components/Layout.js';
 import Head from 'next/head';
 import theme from "../styles/Theme";
 import { useRouter } from 'next/router';
