@@ -1,5 +1,5 @@
 
-import { green, orange, pink } from '@mui/material/colors';
+import { green, blueGrey } from '@mui/material/colors';
 
   const themeTokens = (mode) =>({
     status: {
@@ -17,7 +17,7 @@ import { green, orange, pink } from '@mui/material/colors';
         contrastText: '#fff',
       },
       background: {
-              paper: '#EFF7FF', // your color
+              paper: blueGrey[600], // your color
             },
     },
   });

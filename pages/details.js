@@ -1,20 +1,23 @@
 import Grid from '@mui/material/Unstable_Grid2';
-import { Box, TextField, Button, Stack } from '@mui/material';
+import { Box, TextField, Button, Stack, List, ListItem, ListItemText } from '@mui/material';
 import Autocomplete from '@mui/material/Autocomplete';
 import CaseDetails from '../components/CaseDetail';
 import EventDetail from "../components/EventDetail";
 import { useAppContext } from "../context/AppContext";
-import Layout from '../components/layout';
+import Layout from '../components/Layout.js';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { getEvents, getCaseDetails } from '../utils/apiHelpers';
+import { getContacts } from '../utils/graphApiHelpers';
 
 export default function Main({}) {
   const router = useRouter();
   const [selectedFile, setSelectedFile] = useAppContext();
   const [events, setEvents] = useState(null);
   const [caseDetail, setCaseDetail] = useState(null);
+  const [contactList, setContactList] = useState([]);
+  const [selectedContacts, setSelectedContacts] = useState([]);
   const taskId = router.query.taskId;
   
   useEffect(() => {
@@ -25,23 +28,21 @@ export default function Main({}) {
       setEvents(eventInfo);
       console.log(events);
     }
-    fetchData();
-  },[]);
-    // const entries = [
-    //     { subject: "Entry 1",date:"1998-06-28", description: "Description 1" },
-    //     { subject: "Entry 2",date:"2007-05-14", description: "Description 2" },
-    //     { subject: "Entry 3",date:"2023-02-28", description: "Description 3" },
-    //   ];
 
-      const emailNames = [
-        {name: 'John Doe', email: 'jhon.doe@email.com'},
-        {name: 'James Bond', email: 'bond.james@007.com'},
-        {name: 'Peter Parker', email: 'parker.peter@marvel.com'},
-        {name: 'Anakin Skywalker ', email: 'darth_vader@starwars.com'},
-        {name: 'Djinn Djarin', email: 'the.mandalorian@disney.com'},
-      ];
-      
-      //const caseDetail = {court:"Arizona Superior Maricopa County", caseNum: "CV12587651", plaintiff: "Saul Goodman", defendant: "Harvey Specter"};
+    async function fetchContacts() {
+      const contacts = await getContacts();
+      setContactList(contacts); 
+
+    }
+
+    fetchData();
+    fetchContacts();
+  },[]);
+
+  const handleContactChange = (event, value, reason) => {
+    //even: onClick, value: latest value in the text field, reason: select, add or remove
+    setSelectedContacts(value);
+  };
       
       return(
         <Layout>
@@ -57,9 +58,18 @@ export default function Main({}) {
             <Stack spacing={1.5}>
               <Autocomplete
                   multiple
-                  options={emailNames}
-                  getOptionLabel={(option) => option.name}
                   filterSelectedOptions
+                  options={contactList}
+                  value={selectedContacts}
+                  onChange={handleContactChange}
+                  getOptionLabel={(option) => option.name}
+                  renderOption={(props, option) => (
+                    <List {...props}>
+                      <ListItem>
+                        <ListItemText primary={option.name} secondary={option.email} />
+                      </ListItem>
+                    </List>
+                  )}
                   renderInput={(params) => (
                     <TextField
                         {...params}

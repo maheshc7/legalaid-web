@@ -1,5 +1,7 @@
+import { Button, Stack } from '@mui/material';
 import Head from 'next/head';
 import Image from 'next/image';
+import logo from "../public/logo.png";
 
 export const siteTitle = 'LegalAid - Make Scheduling Easy';
 
@@ -16,15 +18,15 @@ export default function Layout({ children, home }) {
           <meta name="twitter:card" content="summary_large_image" />
         </Head>
         <header>
-          <center>
-          <Image
-              priority
-              src="/logo.png"
-              height={64}
-              width={256}
-              alt="LegalAid"
-            />
-          </center>
+          <Stack direction={"row"} alignItems={"center"} justifyContent={"space-between"} marginX={2}>
+            <Image
+                src={logo}
+                height={64}
+                width={256}
+                alt="LegalAid"
+              />
+            <Button variant='contained'>Login</Button>
+          </Stack>
         </header>
         <main>{children}</main>
         </>

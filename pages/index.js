@@ -1,6 +1,6 @@
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import Layout, { siteTitle } from '../components/layout';
+import Layout, { siteTitle } from '../components/Layout.js';
 import FileUpload from '../components/FileUpload';
 import { uploadFile } from '../utils/apiHelpers';
 import { useAppContext } from "../context/AppContext";

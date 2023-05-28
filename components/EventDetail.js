@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import React, { useState } from "react";
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { TextField, Stack, useTheme} from '@mui/material';
+import { TextField, Stack} from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import EDButton from './EditDeleteButtonControl';
 
@@ -31,7 +31,7 @@ export default function EventDetail({ entry }) {
                     margin="normal"
                     slotProps={{ textField: { size: 'small' } }}
                     value={dayjs(date)}
-                    onChange={(e) => setDate(e.target.value)}
+                    onChange={(e) => setDate(e)}
                     disabled={!isEditable}
                   />
                 </LocalizationProvider>
