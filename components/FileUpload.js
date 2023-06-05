@@ -49,17 +49,17 @@ const DropText = styled(Typography)({
   zIndex: 1,
 });
 
-function FileUpload({onUpload}) {
-  const [selectedFile, setSelectedFile] = useAppContext();
+function FileUpload({selectedFile, onUpload, onSelect}) {
   const [error, setError] = useState("");
 
   const handleSelectFile = (e) => {
     const file = e.target.files[0];
     if (file.type === "application/pdf") {
-      setSelectedFile(file);
+      console.log("Calling on Select");
+      onSelect(file);
       setError("");
     } else {
-      setSelectedFile(null);
+      onSelect(null);
       setError("Please select a PDF file.");
     }
   };
@@ -76,10 +76,10 @@ function FileUpload({onUpload}) {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file.type === "application/pdf") {
-      setSelectedFile(file);
+      onSelect(file);
       setError("");
     } else {
-      setSelectedFile(null);
+      onSelect(null);
       setError("Please select a PDF file.");
     }
   };
@@ -117,6 +117,7 @@ function FileUpload({onUpload}) {
         {selectedFile ? (
           <Typography
             variant="h5"
+            color={"black"}
             sx={{
               fontWeight: "bold",
               position: "absolute",
@@ -131,6 +132,7 @@ function FileUpload({onUpload}) {
           <>
             <SelectFileButton
               variant="contained"
+              color="secondary"
               startIcon={<CloudUploadIcon />}
               size="large">
               Select a PDF file

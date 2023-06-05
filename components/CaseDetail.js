@@ -12,15 +12,22 @@ export default function CaseDetails({ caseDetail }) {
     const [plaintiff, setPlaintiff] = useState(caseDetail.plaintiff);
     const [defendant, setDefendant] = useState(caseDetail.defendant);
 
+    const handleSaveClick = () => {
+        if (court && caseNum && plaintiff && defendant){
+            setIsEditable(false);
+        }
+    }
+
     return(
         <>
             <Stack direction="row" justifyContent="space-between" sx={{pl:2, pr:1}}>
                 <Typography variant="h6" color={"grey.700"} gutterBottom>Case Details</Typography>
-                <EDButton isEditable={isEditable} setIsEditable={setIsEditable} showDelete={false}/>
+                <EDButton isEditable={isEditable} setIsEditable={setIsEditable} onSave={handleSaveClick} showDelete={false}/>
             </Stack>
 
             <TextField
             multiline
+                error={!court.trim()}
                 label="Court"
                 size ="small"
                 margin="normal"
@@ -30,6 +37,7 @@ export default function CaseDetails({ caseDetail }) {
                 disabled={!isEditable}
             />
             <TextField
+                error={!caseNum.trim()}
                 label="Case Number"
                 size ="small"
                 margin="normal"
@@ -38,6 +46,7 @@ export default function CaseDetails({ caseDetail }) {
                 disabled={!isEditable}
             />
             <TextField
+                error={!plaintiff.trim()}
                 label="Plaintiff"
                 size ="small"
                 margin="normal"
@@ -46,6 +55,7 @@ export default function CaseDetails({ caseDetail }) {
                 disabled={!isEditable}
             />
             <TextField
+                error={!defendant.trim()}
                 label="Defendant"
                 size ="small"
                 margin="normal"

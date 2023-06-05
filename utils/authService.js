@@ -1,50 +1,106 @@
-import { PublicClientApplication } from "@azure/msal-browser";
+import { Client} from '@microsoft/microsoft-graph-client';
 
-const msalConfig = {
-  auth: {
-    clientId: "6f3df88c-8168-4592-b1a0-bf4b7ef4c3e7", //secure it
-    redirectUri: "http://localhost:3000", // or your production URL
-  },
-};
+let graphClient = undefined;
 
-const msalInstance = new PublicClientApplication(msalConfig);
-
-export async function login() {
-  const loginRequest = {
-    scopes: ["openid", "profile", "User.Read", "Calendars.ReadWrite", "People.Read"],
-  };
-
-  try {
-    const response = await msalInstance.loginPopup(loginRequest);
-    console.log(response);
-    msalInstance.setActiveAccount(response.account);
-    return response.account;
-  } catch (error) {
-    console.error("Authentication error:", error);
-    throw error;
+function ensureClient(authProvider) {
+  if (!graphClient) {
+    graphClient = Client.initWithMiddleware({
+      authProvider: authProvider
+    });
   }
-};
 
-export async function getAccessToken() {
-  const tokenRequest = {
-    scopes: ["Calendars.ReadWrite", "Contacts.Read", "People.Read"],
+  return graphClient;
+}
+
+// <GetUserSnippet>
+export async function getUser(authProvider){
+  ensureClient(authProvider);
+
+  // Return the /me API endpoint result as a User object
+  const user = await graphClient.api('/me')
+    // Only retrieve the specific fields needed
+    .select('displayName,userPrincipalName')
+    .get();
+
+  return user;
+}
+
+export async function getUserTimeZone(authProvider){
+  ensureClient(authProvider);
+
+  // Return the /me API endpoint result as a User object
+  const timeZone = await graphClient.api('/me/mailboxSettings/timeZone')
+    .get();
+  console.log(timeZone);
+  return timeZone.value;
+}
+// </GetUserSnippet>
+
+// <GetContactsSnippet>
+export async function getContacts(authProvider){
+  ensureClient(authProvider);
+
+  // GET /me/people
+  // JSON representation of the new event is sent in the
+  // request body
+  var response = await graphClient
+    .api('/me/people')
+    .get();
+  //TO DO: Add iterator.
+  
+  const contactList = response.value.map(({displayName, scoredEmailAddresses: [{address}]}) => ({name: displayName, address: address}))
+  
+  return contactList;
+}
+
+export async function getFilteredContacts(authProvider, query) {
+  // Make an API call to fetch filtered contacts based on the query
+  ensureClient(authProvider);
+
+  // GET /me/people
+  // JSON representation of the new event is sent in the
+  // request body
+  var response = await graphClient
+    .api('/me/people')
+    .select('displayName,scoredEmailAddresses')
+    .search(query)
+    .get();
+  
+  const filteredContacts = response.value.map(({displayName, scoredEmailAddresses: [{address}]}) => ({name: displayName, address: address}))
+
+  return filteredContacts;
+};
+// </GetContactsSnippet>
+
+// <CreateEventSnippet>
+export async function postEvent(authProvider, user, eventDetails, attendees){
+  ensureClient(authProvider);
+
+  // POST /me/events
+  // JSON representation of the new event is sent in the
+  // request body
+  var endDate = new Date(eventDetails.date)
+  endDate.setDate(endDate.getDate()+1)
+  console.log(endDate, user.timeZone.value)
+  const eventPayload = {
+    subject: eventDetails.subject,
+    body: {
+      contentType: 'HTML',
+      content: eventDetails.description,
+    },
+    start: {
+      dateTime: eventDetails.date,
+      timeZone:user.timeZone.value,
+    },
+    end: {
+      dateTime: endDate,
+      timeZone:user.timeZone.value,
+    },
+    attendees: attendees,
+    // other event details
   };
-
-  try {
-    const response = await msalInstance.acquireTokenSilent(tokenRequest);
-    return response.accessToken;
-  } catch (error) {
-    if (error instanceof InteractionRequiredAuthError) {
-      // fallback to interaction when silent call fails
-      return msalInstance.acquireTokenRedirect(request);
-    }
-    else {
-      console.error("Access token error:", error);
-      throw error;
-    }
-  }
-};
-
-export  function logout() {
-  msalInstance.logout();
-};
+  return await graphClient
+    .api('/me/events')
+    .post(eventPayload);
+}
+// </CreateEventSnippet>

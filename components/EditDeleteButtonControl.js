@@ -5,24 +5,25 @@ import CheckIcon from '@mui/icons-material/CheckCircle';
 import EditIcon from '@mui/icons-material/ModeEdit';
 import { ButtonGroup } from "@mui/material";
 
-export default function EDButton ({isEditable, setIsEditable, showDelete = true}) {
+export default function EDButton ({isEditable, setIsEditable, onSave = {}, onDelete = {}, showDelete = true}) {
 
     const handleEditClick = () => {
         setIsEditable(true);
       };
     
       const handleSaveClick = () => {
-        setIsEditable(false);
+        onSave();
       };
     
       const handleDeleteClick = () => {
         // perform delete logic here
+        onDelete();
       };
 
     return (
         <ButtonGroup>
             {isEditable ? (
-                <IconButton aria-label="save" color="success" onClick={handleSaveClick}>
+                <IconButton aria-label="save" color="success" type="submit" onClick={handleSaveClick}>
                 <CheckIcon />
                 </IconButton>
             ) : (

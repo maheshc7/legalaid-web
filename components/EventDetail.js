@@ -1,16 +1,62 @@
 import dayjs from 'dayjs';
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { TextField, Stack} from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import EDButton from './EditDeleteButtonControl';
 
-export default function EventDetail({ entry }) {
+export default function EventDetail({ entry, onChange, onDelete }) {
   const [isEditable, setIsEditable] = useState(false);
-  const [subject, setSubject] = useState(entry.subject);
-  const [date, setDate] = useState(entry.date);
-  const [description, setDescription] = useState(entry.description);
+  const [subjectError, setSubjectError] = useState(!entry.subject.trim());
+  const [descError, setDescError] = useState(!entry.description.trim());
+  const [ event, setEvent] = useState({
+    subject: entry.subject,
+    date: entry.date,
+    description: entry.description,
+    isEditable: (isEditable || descError || subjectError)
+  });
+
+  useEffect(() =>{
+    updateEvent("isEditable", !isEditable);
+    onChange(event);
+
+  },[isEditable]);
+
+  const updateEvent = (keyword, value) => {
+    setEvent((prevValue) => {
+      return {...prevValue, [keyword]: value};
+    });
+  }
+
+  const handleSave = () => {
+    // Perform validation
+    if (!event.subject.trim()) {
+      setSubjectError(true);
+      return;
+    }
+
+    if (!event.description.trim()) {
+      setDescError(true);
+      return;
+    }
+    setSubjectError(false);
+    setDescError(false);
+    // Validation passed, save the entry
+    setIsEditable(false);
+  };
+
+  const handleEventChange = (keyword, value, setError) => {
+    // Update the eventDetails state when the values change
+    if (value === ''){
+      setError(true);
+    }
+    else{
+      setError(false);
+    }
+    updateEvent(keyword,value);
+  }
+
 
   return (
         <Grid container flexDirection={"row"}>
@@ -18,11 +64,13 @@ export default function EventDetail({ entry }) {
             <Grid xs={8} md={8} lg={8} >
               <Stack spacing={1.5}>
                 <TextField
+                  error = {subjectError}
+                  helperText = {subjectError? "Subject is required" : ""}
                   label="Subject"
                   size ="small"
                   margin="normal"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
+                  value={event.subject}
+                  onChange={(e) => handleEventChange("subject", e.target.value, setSubjectError)}
                   disabled={!isEditable}
                 />
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -30,8 +78,8 @@ export default function EventDetail({ entry }) {
                   label="Start"
                     margin="normal"
                     slotProps={{ textField: { size: 'small' } }}
-                    value={dayjs(date)}
-                    onChange={(e) => setDate(e)}
+                    value={dayjs(event.date)}
+                    onChange={(e) => handleEventChange("date", e, (x)=>{})}
                     disabled={!isEditable}
                   />
                 </LocalizationProvider>
@@ -39,7 +87,7 @@ export default function EventDetail({ entry }) {
             </Grid>
             <Grid xs={4} md={4} lg={4} paddingTop={2} >
             <Stack direction="row" justifyContent="end">
-              <EDButton isEditable={isEditable} setIsEditable={setIsEditable}/>
+              <EDButton isEditable={isEditable} setIsEditable={setIsEditable} onSave={handleSave} onDelete={onDelete}/>
             </Stack>
             </Grid>
           </Grid>
@@ -52,8 +100,10 @@ export default function EventDetail({ entry }) {
               size ="small"
               label="Description"
               fullWidth={true}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              error = {descError}
+              helperText = {descError? "Description is required" : ""}
+              value={event.description}
+              onChange={(e) => handleEventChange("description", e.target.value, setDescError)}
               disabled={!isEditable}
             />
           </Grid>
