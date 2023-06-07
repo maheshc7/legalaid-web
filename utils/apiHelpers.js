@@ -1,7 +1,34 @@
 import axios from 'axios';
+import config from '../Config';
 
-const BASE_URL = 'https://virtserver.swaggerhub.com/maheshc7/legalAid/1.0.0';
+const BASE_URL = config.backend_url;
 
+// Function to upload a file
+export async function uploadFileGetEvents(file) {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await axios.post(`${BASE_URL}/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (response.status === 200) {
+      return [response.data.case, response.data.events];
+    } 
+    else {
+      throw new Error('Failed to upload file'+ response.data);
+    }
+  } catch (error) {
+    // Handle error
+    console.error('Error uploading file:', error);
+    throw error;
+  }
+}
+
+/*
 // Function to upload a file
 export async function uploadFile(file) {
   try {
@@ -34,11 +61,11 @@ export async function getEvents(id) {
     if (response.status === 200) {
       return response.data;
     } else {
-      throw new Error('Failed to get events');
+      throw new Error('Failed to get events'+ error);
     }
   } catch (error) {
     // Handle error
-    console.error('Error getting events:', error);
+    console.error('Error getting events:'+ error);
     throw error;
   }
 }
@@ -59,3 +86,4 @@ export async function getCaseDetails(id) {
       throw error;
     }
   }
+  */

@@ -36,6 +36,55 @@ export async function getUserTimeZone(authProvider){
 }
 // </GetUserSnippet>
 
+// <CalendarSnippet>
+export async function getCalendars(authProvider, calendarName){
+  ensureClient(authProvider);
+
+  // Get the calendar if it exists
+  var calendar = await graphClient.api('/me/calendars')
+    .filter(`name eq '${calendarName}'`)
+    .select('id')
+    .get();
+  console.log(calendar, calendar.value, calendar.value.length)
+  console.log(!calendar,calendar === undefined, !calendar.value.length);
+  if(!calendar || calendar === undefined || !calendar.value.length){
+    // If calendar doesn't exist, create a new calendar 
+    console.log(calendar);
+    calendar = await graphClient.api('/me/calendars')
+      .post({
+        name: calendarName
+      });
+
+    console.log(calendar);
+
+    return calendar.id;
+  }
+
+  return calendar.value[0].id;
+}
+
+export async function shareCalendar(calendarId, calendarPermission){
+  var id = 0;
+  const batchRequest = {
+    requests: calendarPermission.map((permission) => ({
+      method: 'POST',
+      url: `/me/calendars/${calendarId}/calendarPermissions`,
+      body: permission,
+      id: id++,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    })),
+  };
+
+  const batchRequestString = JSON.stringify(batchRequest);
+
+  await graphClient.api('/$batch').post(batchRequestString);
+  // const response = await graphClient.api(`/me/calendars/${calendarId}/calendarPermissions`)
+	//   .post(calendarPermission);
+
+}
+
 // <GetContactsSnippet>
 export async function getContacts(authProvider){
   ensureClient(authProvider);
@@ -73,34 +122,22 @@ export async function getFilteredContacts(authProvider, query) {
 // </GetContactsSnippet>
 
 // <CreateEventSnippet>
-export async function postEvent(authProvider, user, eventDetails, attendees){
+export async function postEvent(authProvider, requests){
   ensureClient(authProvider);
 
-  // POST /me/events
-  // JSON representation of the new event is sent in the
-  // request body
-  var endDate = new Date(eventDetails.date)
-  endDate.setDate(endDate.getDate()+1)
-  console.log(endDate, user.timeZone.value)
-  const eventPayload = {
-    subject: eventDetails.subject,
-    body: {
-      contentType: 'HTML',
-      content: eventDetails.description,
-    },
-    start: {
-      dateTime: eventDetails.date,
-      timeZone:user.timeZone.value,
-    },
-    end: {
-      dateTime: endDate,
-      timeZone:user.timeZone.value,
-    },
-    attendees: attendees,
-    // other event details
-  };
-  return await graphClient
-    .api('/me/events')
-    .post(eventPayload);
+  const batchSize = 20;
+  const totalRequests = requests.length;
+  const totalBatches = Math.ceil(totalRequests / batchSize);
+
+  for (let i = 0; i < totalBatches; i++) {
+    const startIndex = i * batchSize;
+    const endIndex = Math.min(startIndex + batchSize, totalRequests);
+    const batchRequests = {requests: requests.slice(startIndex, endIndex)};
+    
+    console.log(batchRequests);
+
+    await graphClient.api('/$batch').post(batchRequests);
+  }
+  
 }
 // </CreateEventSnippet>

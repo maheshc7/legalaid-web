@@ -5,12 +5,14 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { TextField, Stack} from '@mui/material';
 import Grid from '@mui/material/Unstable_Grid2';
 import EDButton from './EditDeleteButtonControl';
+import { Widgets } from '@mui/icons-material';
 
 export default function EventDetail({ entry, onChange, onDelete }) {
   const [isEditable, setIsEditable] = useState(false);
   const [subjectError, setSubjectError] = useState(!entry.subject.trim());
   const [descError, setDescError] = useState(!entry.description.trim());
   const [ event, setEvent] = useState({
+    id: entry.id,
     subject: entry.subject,
     date: entry.date,
     description: entry.description,
@@ -91,7 +93,7 @@ export default function EventDetail({ entry, onChange, onDelete }) {
             </Stack>
             </Grid>
           </Grid>
-          <Grid xs={12} md={12} lg={12}>
+          <Grid xs={12} md={12} lg={12} paddingRight={1}>
             <TextField
               multiline
               minRows={3}
@@ -100,6 +102,7 @@ export default function EventDetail({ entry, onChange, onDelete }) {
               size ="small"
               label="Description"
               fullWidth={true}
+              // style={{ width: "95%", flexGrow: 1}}
               error = {descError}
               helperText = {descError? "Description is required" : ""}
               value={event.description}

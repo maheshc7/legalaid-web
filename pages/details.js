@@ -7,9 +7,9 @@ import { useAppContext } from "../context/AppContext";
 import Layout from '../components/Layout.js';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { useState, useEffect } from 'react';
-import { getEvents, getCaseDetails } from '../utils/apiHelpers';
-import { postEvent, getContacts, getFilteredContacts } from '../utils/authService';
+import { useState, useEffect, useRef } from 'react';
+import { getEvents, getCaseDetails, uploadFileGetEvents } from '../utils/apiHelpers';
+import { postEvent, getContacts, getFilteredContacts, getCalendars, shareCalendar } from '../utils/authService';
 import AddIcon from '@mui/icons-material/Add';
 import ErrorMessage from '../components/ErrorMessage';
 
@@ -25,19 +25,23 @@ export default function Main() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreatable, setIsCreatable] = useState(false);
   const taskId = router.query.taskId;
+  const scrollRef = useRef(null);
   
   useEffect(() => {
     async function fetchData() {
       try {
-        const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
+        // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
+        const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
+        console.log(caseInfo,eventInfo)
         setCaseDetail(caseInfo);
         setEvents(eventInfo);
       } catch (error) {
+        console.log(error)
         app.displayError('Error fetching data', error.message);
       }
     }
     fetchData();
-  },[taskId]);
+  },[selectedFile]);
 
   useEffect(() => {
     async function fetchFilteredContacts() {
@@ -77,27 +81,103 @@ export default function Main() {
   }, [eventDetails]);
 
   const handleEventDelete = (id) => {
-    console.log(id, events);
     setEvents((prevEvents) =>
+    prevEvents.filter((event) => event.id !== id)
+    );
+
+    setEventDetails((prevEvents) =>
     prevEvents.filter((event) => event.id !== id)
     );
   }
 
+  const handleEventAdd = (event) => {
+    console.log(event);
+    event.preventDefault();
+    const newEvent = {
+      id: events.length+1,
+      subject: "",
+      description: "",
+      date: new Date()};
+
+    setEvents([...events,newEvent]);
+    setIsCreatable(false);
+  
+    // Scroll to the new component
+    const newEventRef = scrollRef.current.lastElementChild;
+    newEventRef.scrollIntoView({ behavior: "smooth" });
+    
+  }
+
   async function createEvents() {
-    const attendees = selectedContacts.map((contact) => ({
-      emailAddress: {
-        address: contact.address,
-        name: contact.name,
-      },
-      type: "required",
-    }))
-      
-    for(const newEvent of eventDetails){
-      try {
-        await postEvent(app.authProvider, app.user, newEvent, attendees);
-      } catch (err) {
-        app.displayError('Error creating event', JSON.stringify(err));
+    // setIsCreatable(false);
+    try {
+      const attendees = selectedContacts.map((contact) => ({
+        emailAddress: {
+          address: contact.address,
+          name: contact.name,
+        },
+        type: "required",
+      }))
+
+      const calendarId = await getCalendars(app.authProvider, "LegalMaid");
+
+      console.log(selectedContacts.length)
+      if(selectedContacts.length){
+        const calendarPermission = selectedContacts.map((contact) => ({
+          emailAddress: {
+            name: contact.name,
+            address: contact.address,
+          },
+          role: 'write', // Set the desired role for all contacts
+        }));
+        
+        console.log(calendarPermission);
+
+        const calendarResponse = await shareCalendar(calendarId,calendarPermission);
       }
+      
+      var batchRequests = eventDetails.map((newEvent) =>{
+        var startDate = new Date(newEvent.date);
+        var endDate = new Date(newEvent.date);
+        endDate.setDate(endDate.getDate()+1);
+
+        const eventPayload = {
+          subject: newEvent.subject,
+          body: {
+            contentType: 'HTML',
+            content: newEvent.description,
+          },
+          start: {
+            dateTime: startDate,
+            timeZone:app.user.timeZone.value,
+          },
+          end: {
+            dateTime: endDate,
+            timeZone:app.user.timeZone.value,
+          },
+          // attendees: attendees, //commenting for now. Attendees get invite to the calendar.
+          // other event details
+        };
+
+        return {
+          id: newEvent.id, // Unique identifier for the request
+          method: 'POST',
+          url: `/me/calendars/${calendarId}/events`,
+          body: eventPayload,
+          headers: {
+            "Content-Type": "application/json"
+          },
+          transactionId: caseDetail.caseNum //what if they run again and it fails? Do the previous events get removed? Should be sent in batch
+        };
+      });
+      console.log(batchRequests);
+      console.log("Batch Request Length: ",batchRequests.length)
+
+      await postEvent(app.authProvider, batchRequests);
+
+    } catch (err) {
+      // setIsCreatable(true);
+      app.displayError('Error creating event', err);
     }
   }
       
@@ -107,7 +187,7 @@ export default function Main() {
             <title>Order Detail</title>
           </Head>
         <Grid container spacing={1} padding={2}>
-          <Grid sm={12} md={12} lg={6} style={{ minHeight: '700px' }}>
+          <Grid sm={12} md={12} lg={6} style={{ minHeight: '700px', maxHeight: '700px'}}>
             {selectedFile && <embed src={URL.createObjectURL(selectedFile)} type="application/pdf" title={selectedFile.name} width="100%" height="100%" />}
           </Grid>
            
@@ -148,18 +228,18 @@ export default function Main() {
           </Grid> 
 
           <Grid sm={12} md={6} lg={3}>
-
+           <Box id='event_box' ref={scrollRef} component="div" sx={{ height: '600px' , overflow: 'auto' }}>
               {events && events.length>0 ? (events.map((entry, index) => (
-                <EventDetail key={index} entry={entry} onChange={(values) => handleEventChange(index,values)} onDelete = {() => handleEventDelete(entry.id)}/>
+                <EventDetail key={entry.id} entry={entry} onChange={(values) => handleEventChange(index,values)} onDelete = {() => handleEventDelete(entry.id)}/>
               ))): <CircularProgress/>}
-
-              <Grid marginTop={2} textAlign={"end"}>
-                <Tooltip title="Add Event">
-                <Fab size="medium" color="secondary" onClick={()=>{setEvents(oldArray =>[...oldArray,{id: events.length+1, subject: "",description: "", date: new Date()}]); setIsCreatable(false);}}>  
-                  <AddIcon />
-                </Fab>
-                </Tooltip>
-              </Grid>
+            </Box>
+            <Grid marginTop={2} textAlign={"end"}>
+              <Tooltip title="Add Event">
+              <Fab size="medium" color="secondary" onClick={handleEventAdd}>  
+                <AddIcon />
+              </Fab>
+              </Tooltip>
+            </Grid>
           </Grid> 
           
         </Grid>
