@@ -4,7 +4,6 @@ import { styled } from "@mui/system";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { useAppContext } from "../context/AppContext";
 
-
 const FileInput = styled("input")({
   display: "none",
 });
@@ -49,7 +48,7 @@ const DropText = styled(Typography)({
   zIndex: 1,
 });
 
-function FileUpload({selectedFile, onUpload, onSelect}) {
+function FileUpload({ selectedFile, onUpload, onSelect }) {
   const [error, setError] = useState("");
 
   const handleSelectFile = (e) => {
@@ -134,25 +133,26 @@ function FileUpload({selectedFile, onUpload, onSelect}) {
               variant="contained"
               color="secondary"
               startIcon={<CloudUploadIcon />}
-              size="large">
+              size="large"
+            >
               Select a PDF file
             </SelectFileButton>
             <DropText>or drop file here</DropText>
-              </>
-          )}
-        </DropZone>
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          onClick={handleUploadFile}
-          disabled={!selectedFile}
-        >
-          Upload
-        </Button>
-      </Container>
-         );
-        }
-        
-        export default FileUpload;
+          </>
+        )}
+      </DropZone>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      <Button
+        variant="contained"
+        color="primary"
+        size="large"
+        onClick={handleUploadFile}
+        disabled={!selectedFile}
+      >
+        Upload
+      </Button>
+    </Container>
+  );
+}
+
+export default FileUpload;

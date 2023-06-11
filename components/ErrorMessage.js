@@ -11,13 +11,14 @@ export default function ErrorMessage() {
 
   if (app.error) {
     return (
-      <Alert severity="error" variant="outlined" onClose={() => app.clearError()}>
+      <Alert
+        severity="error"
+        variant="outlined"
+        onClose={() => app.clearError()}
+      >
         <AlertTitle>Error</AlertTitle>
-        <strong>{app.error.message}</strong> - 
-        {app.error.debug ?
-          <>{app.error.debug}</>
-          : null
-        }
+        <strong>{app.error.message}</strong> -
+        {app.error.debug ? <>{app.error.debug}</> : null}
       </Alert>
     );
   }
