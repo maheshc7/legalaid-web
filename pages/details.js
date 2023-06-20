@@ -144,7 +144,7 @@ export default function Main() {
         type: "required",
       }));
 
-      const calendarId = await getCalendars(app.authProvider, "LegalMaid");
+      const calendarId = await getCalendars(app.authProvider, caseDetail.caseNum);
 
       console.log(selectedContacts.length);
       if (selectedContacts.length) {
@@ -203,12 +203,9 @@ export default function Main() {
       console.log(batchRequests);
       console.log("Batch Request Length: ", batchRequests.length);
 
-      // await postEvent(app.authProvider, batchRequests);
+      await postEvent(app.authProvider, batchRequests);
       //after successfully creating events.
       setEventStatus("success");
-      setTimeout(() => {
-        router.push("/");
-      }, 3000);
     } catch (err) {
       setIsCreatable(true);
       setEventStatus("editing");

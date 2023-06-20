@@ -5,7 +5,6 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { TextField, Stack } from "@mui/material";
 import Grid from "@mui/material/Unstable_Grid2";
 import EDButton from "./EditDeleteButtonControl";
-import { Widgets } from "@mui/icons-material";
 
 export default function EventDetail({ entry, onChange, onDelete }) {
   const [isEditable, setIsEditable] = useState(false);
