@@ -147,7 +147,7 @@ export default function Main() {
 
       const calendarId = await getCalendars(app.authProvider, caseDetail.caseNum);
 
-      console.log(selectedContacts.length);
+      console.log("Length - Selected Contacts: ",selectedContacts.length);
       if (selectedContacts.length) {
         const calendarPermission = selectedContacts.map((contact) => ({
           emailAddress: {
@@ -164,7 +164,7 @@ export default function Main() {
           calendarPermission
         );
       }
-
+      console.log("User Timezone: ",app.user.timeZone.value)
       var batchRequests = eventDetails.map((newEvent) => {
         const dateOnly = newEvent.date.format("YYYY-MM-DD") + " 00:00:00";
         var startDate = new Date(dateOnly);

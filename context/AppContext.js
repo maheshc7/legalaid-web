@@ -86,7 +86,7 @@ function useProvideAppContext() {
               displayName: user.displayName || "",
               email: user.mail || user.userPrincipalName || "",
               //  timeFormat: user.mailboxSettings?.timeFormat || 'h:mm a',
-              timeZone: { value: "Pacific Standard Time" }, //await getUserTimeZone(authProvider),
+              timeZone: await getUserTimeZone(authProvider),
             });
           }
         } catch (err) {
@@ -112,7 +112,7 @@ function useProvideAppContext() {
       displayName: user.displayName || "",
       email: user.mail || user.userPrincipalName || "",
       //  timeFormat: user.mailboxSettings?.timeFormat || '',
-      timeZone: { value: "Pacific Standard Time" }, //await getUserTimeZone(authProvider),
+      timeZone: await getUserTimeZone(authProvider),
     });
   };
   // </SignInSnippet>
