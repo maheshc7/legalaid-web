@@ -29,6 +29,7 @@ import {
   getFilteredContacts,
   getCalendars,
   shareCalendar,
+  postEvent,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
 import ErrorMessage from "../components/ErrorMessage";
@@ -206,6 +207,9 @@ export default function Main() {
       await postEvent(app.authProvider, batchRequests);
       //after successfully creating events.
       setEventStatus("success");
+      setTimeout(() => {
+        router.push("/");
+      }, 3000);
     } catch (err) {
       setIsCreatable(true);
       setEventStatus("editing");
