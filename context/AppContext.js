@@ -100,7 +100,7 @@ function useProvideAppContext() {
 
   // <SignInSnippet>
   const signIn = async () => {
-    await msal.instance.loginPopup({
+    await msal.instance.loginRedirect({
       scopes: config.scopes,
       prompt: "select_account",
     });
