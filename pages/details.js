@@ -164,7 +164,7 @@ export default function Main() {
           calendarPermission
         );
       }
-      console.log("User Timezone: ",app.user.timeZone.value)
+      console.log("User Timezone: ",app.user.timeZone)
       var batchRequests = eventDetails.map((newEvent) => {
         const dateOnly = newEvent.date.format("YYYY-MM-DD") + " 00:00:00";
         var startDate = new Date(dateOnly);
@@ -180,11 +180,11 @@ export default function Main() {
           },
           start: {
             dateTime: startDate,
-            timeZone: app.user.timeZone.value,
+            timeZone: app.user.timeZone,
           },
           end: {
             dateTime: endDate,
-            timeZone: app.user.timeZone.value,
+            timeZone: app.user.timeZone,
           },
           // attendees: attendees, //commenting for now. Attendees get invite to the calendar.
           // other event details
