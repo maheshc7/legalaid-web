@@ -6,10 +6,10 @@ import { useAppContext } from "../context/AppContext";
 
 // <ErrorMessageSnippet>
 
-export default function ErrorMessage() {
+export default function ErrorMessage({home}) {
   const app = useAppContext();
 
-  if (app.error) {
+  if (app.error && !home) {
     return (
       <Alert
         severity="error"

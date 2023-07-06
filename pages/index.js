@@ -24,7 +24,6 @@ export default function Home() {
 
   return (
     <Layout home>
-      {app.clearError}
       <Head>
         <title>{siteTitle}</title>
       </Head>
@@ -35,7 +34,7 @@ export default function Home() {
         onUpload={handleUploadFile}
       />
 
-      <ErrorMessage />
+      <ErrorMessage home/>
     </Layout>
   );
 }
