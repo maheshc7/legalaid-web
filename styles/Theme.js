@@ -1,22 +1,23 @@
-import { createTheme } from '@mui/material/styles';
+import { green, blueGrey } from "@mui/material/colors";
 
-const theme = createTheme({
+const themeTokens = (mode) => ({
   status: {
-    danger: '#e53e3e',
+    danger: "#e53e3e",
   },
   palette: {
+    mode,
     primary: {
-      main: '#0971f1',
-      darker: '#053e85',
+      main: green[100],
+      dark: green[600],
+      darker: "#053e85",
     },
     neutral: {
-      main: '#64748B',
-      contrastText: '#fff',
+      main: "#64748B",
+      contrastText: "#fff",
     },
     background: {
-            paper: '#EFF7FF', // your color
-          },
+      paper: blueGrey[600], // your color
+    },
   },
 });
-
-export default theme;
+export default themeTokens;

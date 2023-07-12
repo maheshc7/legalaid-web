@@ -1,9 +1,8 @@
 import { useState } from "react";
-import { Box, Button, Container, Stack, Typography } from "@mui/material";
+import { Box, Button, Container, Typography } from "@mui/material";
 import { styled } from "@mui/system";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { useAppContext } from "../context/AppContext";
-
 
 const FileInput = styled("input")({
   display: "none",
@@ -21,7 +20,7 @@ const DropZone = styled(Box)({
   width: "100%",
 
   "&:hover": {
-    backgroundColor: "rgba(0, 0, 0, 0.05)",
+    backgroundColor: "#a3d1ff",
   },
 });
 
@@ -32,7 +31,6 @@ const ErrorMessage = styled(Typography)({
 });
 
 const SelectFileButton = styled(Button)({
-  backgroundColor: "#3F51B5",
   color: "#fff",
   position: "absolute",
   top: "50%",
@@ -50,17 +48,17 @@ const DropText = styled(Typography)({
   zIndex: 1,
 });
 
-function FileUpload({onUpload}) {
-  const [selectedFile, setSelectedFile] = useAppContext();
+function FileUpload({ selectedFile, onUpload, onSelect }) {
   const [error, setError] = useState("");
 
   const handleSelectFile = (e) => {
     const file = e.target.files[0];
     if (file.type === "application/pdf") {
-      setSelectedFile(file);
+      console.log("Calling on Select");
+      onSelect(file);
       setError("");
     } else {
-      setSelectedFile(null);
+      onSelect(null);
       setError("Please select a PDF file.");
     }
   };
@@ -77,10 +75,10 @@ function FileUpload({onUpload}) {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file.type === "application/pdf") {
-      setSelectedFile(file);
+      onSelect(file);
       setError("");
     } else {
-      setSelectedFile(null);
+      onSelect(null);
       setError("Please select a PDF file.");
     }
   };
@@ -118,6 +116,7 @@ function FileUpload({onUpload}) {
         {selectedFile ? (
           <Typography
             variant="h5"
+            color={"black"}
             sx={{
               fontWeight: "bold",
               position: "absolute",
@@ -132,26 +131,28 @@ function FileUpload({onUpload}) {
           <>
             <SelectFileButton
               variant="contained"
+              color="secondary"
               startIcon={<CloudUploadIcon />}
-              size="large">
+              size="large"
+            >
               Select a PDF file
             </SelectFileButton>
             <DropText>or drop file here</DropText>
-              </>
-          )}
-        </DropZone>
-        {error && <ErrorMessage>{error}</ErrorMessage>}
-        <Button
-          variant="contained"
-          color="primary"
-          size="large"
-          onClick={handleUploadFile}
-          disabled={!selectedFile}
-        >
-          Upload
-        </Button>
-      </Container>
-         );
-        }
-        
-        export default FileUpload;
+          </>
+        )}
+      </DropZone>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+      <Button
+        variant="contained"
+        color="primary"
+        size="large"
+        onClick={handleUploadFile}
+        disabled={!selectedFile}
+      >
+        Upload
+      </Button>
+    </Container>
+  );
+}
+
+export default FileUpload;

@@ -1,31 +1,40 @@
-import { useRouter } from 'next/router';
-import Head from 'next/head';
-import Layout, { siteTitle } from '../components/layout';
-import FileUpload from '../components/FileUpload';
-import { uploadFile } from '../utils/apiHelpers';
+import { useRouter } from "next/router";
+import Head from "next/head";
+import Layout, { siteTitle } from "../components/Layout.js";
+import FileUpload from "../components/FileUpload";
+import { uploadFile } from "../utils/apiHelpers";
 import { useAppContext } from "../context/AppContext";
-import { ThemeProvider } from '@mui/material/styles';
-import theme from "../styles/Theme";
+import ErrorMessage from "../components/ErrorMessage.js";
 
 export default function Home() {
   const router = useRouter();
-  const [selectedFile, setSelectedFile] = useAppContext();
+  const app = useAppContext();
+
+  const handleSelectFile = (file) => {
+    console.log("Calling handleSelectFile");
+    app.storeFile(file);
+  };
 
   const handleUploadFile = () => {
-    uploadFile(selectedFile).then((taskId) => {
+    uploadFile(app.selectedFile).then((taskId) => {
       console.log(taskId);
-      router.push({pathname:"/details", query: {taskId: taskId}});
+      router.push({ pathname: "/details", query: { taskId: taskId } });
     });
-    }
+  };
 
   return (
     <Layout home>
-      <ThemeProvider theme={theme}>
       <Head>
         <title>{siteTitle}</title>
       </Head>
-      <FileUpload onUpload={handleUploadFile}/>
-      </ThemeProvider>
+
+      <FileUpload
+        selectedFile={app.selectedFile}
+        onSelect={handleSelectFile}
+        onUpload={handleUploadFile}
+      />
+
+      <ErrorMessage home/>
     </Layout>
   );
 }
