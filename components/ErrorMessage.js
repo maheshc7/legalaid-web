@@ -9,6 +9,9 @@ import { useAppContext } from "../context/AppContext";
 export default function ErrorMessage({home}) {
   const app = useAppContext();
 
+  if(home) {
+    app.clearError()
+  }
   if (app.error && !home) {
     return (
       <Alert
