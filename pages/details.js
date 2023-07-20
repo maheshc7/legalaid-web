@@ -22,9 +22,7 @@ import Layout from "../components/Layout.js";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState, useEffect, useRef } from "react";
-import {
-  uploadFileGetEvents,
-} from "../utils/apiHelpers";
+import { uploadFileGetEvents } from "../utils/apiHelpers";
 import {
   getFilteredContacts,
   getCalendars,
@@ -36,11 +34,15 @@ import ErrorMessage from "../components/ErrorMessage";
 import { CheckCircle } from "@mui/icons-material";
 import logo from "../public/logo.png";
 import Image from "next/image";
+import SplitButton from "../components/SplitButton";
+import { useIsAuthenticated } from "@azure/msal-react";
 
+const splitBtnOptions = ["Download Events (.ics)", "Add to Calendar"];
 export default function Main() {
   const router = useRouter();
   const app = useAppContext();
   const selectedFile = app.selectedFile;
+  const isAuthenticated = useIsAuthenticated();
   const [events, setEvents] = useState([]);
   const [eventDetails, setEventDetails] = useState([]);
   const [caseDetail, setCaseDetail] = useState(null);
@@ -145,9 +147,12 @@ export default function Main() {
         type: "required",
       }));
 
-      const calendarId = await getCalendars(app.authProvider, caseDetail.caseNum);
+      const calendarId = await getCalendars(
+        app.authProvider,
+        caseDetail.caseNum
+      );
 
-      console.log("Length - Selected Contacts: ",selectedContacts.length);
+      console.log("Length - Selected Contacts: ", selectedContacts.length);
       if (selectedContacts.length) {
         const calendarPermission = selectedContacts.map((contact) => ({
           emailAddress: {
@@ -164,7 +169,7 @@ export default function Main() {
           calendarPermission
         );
       }
-      console.log("User Timezone: ",app.user.timeZone)
+      console.log("User Timezone: ", app.user.timeZone);
       var batchRequests = eventDetails.map((newEvent) => {
         const dateOnly = newEvent.date.format("YYYY-MM-DD") + " 00:00:00";
         var startDate = new Date(dateOnly);
@@ -214,6 +219,68 @@ export default function Main() {
       setIsCreatable(true);
       setEventStatus("editing");
       app.displayError("Error creating event", err);
+    }
+  }
+
+  const generateICSContent = (events) => {
+    let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:${caseDetail.caseNum}
+X-WR-TIMEZONE:${app.user.timezone}`;
+
+    events.forEach((eventDetails) => {
+      const dateOnly = eventDetails.date.format("YYYY-MM-DD") + " 00:00:00";
+      var startDate = new Date(dateOnly);
+      var endDate = new Date(dateOnly);
+      endDate.setDate(endDate.getDate() + 1);
+
+      icsContent += `
+BEGIN:VEVENT
+UID:${eventDetails.id}
+DTSTART:${startDate.toISOString().substring(0, 10).replaceAll("-", "")}
+DTEND:${endDate.toISOString().substring(0, 10).replaceAll("-", "")}
+SUMMARY:${eventDetails.subject}
+DESCRIPTION:${eventDetails.description}
+END:VEVENT`;
+    });
+
+    icsContent += "\nEND:VCALENDAR";
+    return icsContent;
+  };
+
+  const downloadICSFile = (icsContent, fileName) => {
+    const blob = new Blob([icsContent], {
+      type: "text/calendar;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleExportICS = () => {
+    const icsContent = generateICSContent(eventDetails);
+    downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
+  };
+
+  async function handleSplitButtonClick(index) {
+    switch (index) {
+      case 0:
+        console.log("Download .ics file");
+        handleExportICS();
+        break;
+
+      case 1:
+        createEvents();
+        break;
+
+      default:
+        console.log("Invalid option");
     }
   }
 
@@ -381,17 +448,17 @@ export default function Main() {
         </Grid>
       </Grid>
 
-      <Stack direction="row" spacing={12} justifyContent="center">
+      <Stack direction="row" spacing={12} justifyContent="space-around">
         <Button variant="outlined" onClick={() => router.push("/")}>
           New File
         </Button>
-        <Button
-          variant="contained"
-          disabled={!isCreatable || events.length<=0}
-          onClick={createEvents}
-        >
-          Create Events
-        </Button>
+        
+        <SplitButton
+          options={splitBtnOptions}
+          onClick={handleSplitButtonClick}
+          disableBtn={!isAuthenticated || !isCreatable || events.length <= 0}
+          disableIndex={isAuthenticated ? -1 : 1}
+        />
       </Stack>
       <ErrorMessage />
     </Layout>

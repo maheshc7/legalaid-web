@@ -104,13 +104,15 @@ export default function Layout({ children, home }) {
                 </Menu>
               </Box>
             </>
-          ) : (
+          ) : home? null: (
             <Button
-              variant="contained"
+              variant="text"
+              size="small"
               onClick={app.signIn}
               startIcon={ms_logo}
+              
             >
-              Sign In
+              Connect Outlook
             </Button>
           )}
         </Stack>
