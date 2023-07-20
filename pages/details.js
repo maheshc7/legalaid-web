@@ -37,7 +37,7 @@ import Image from "next/image";
 import SplitButton from "../components/SplitButton";
 import { useIsAuthenticated } from "@azure/msal-react";
 
-const splitBtnOptions = ["Download Events (.ics)", "Add to Calendar"];
+const splitBtnOptions = ["Download Events", "Add to Outlook"];
 export default function Main() {
   const router = useRouter();
   const app = useAppContext();
@@ -372,7 +372,7 @@ END:VEVENT`;
 
         <Grid sm={12} md={6} lg={3}>
           <Stack spacing={1.5}>
-            <Autocomplete
+            {isAuthenticated?<Autocomplete
               multiple
               filterSelectedOptions
               options={contactList}
@@ -401,7 +401,7 @@ END:VEVENT`;
                   placeholder="Type or select from list"
                 />
               )}
-            />
+            /> : null}
 
             <Box
               border={1}
@@ -456,7 +456,7 @@ END:VEVENT`;
         <SplitButton
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
-          disableBtn={!isAuthenticated || !isCreatable || events.length <= 0}
+          disableBtn={!isCreatable || events.length <= 0}
           disableIndex={isAuthenticated ? -1 : 1}
         />
       </Stack>

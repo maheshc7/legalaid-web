@@ -9,8 +9,6 @@ import Popper from '@mui/material/Popper';
 import MenuItem from '@mui/material/MenuItem';
 import MenuList from '@mui/material/MenuList';
 
-// const options = ['Create a merge commit', 'Squash and merge', 'Rebase and merge'];
-
 export default function SplitButton({options, onClick, disableBtn, disableIndex}) {
   const [open, setOpen] = React.useState(false);
   const anchorRef = React.useRef(null);
@@ -46,7 +44,7 @@ export default function SplitButton({options, onClick, disableBtn, disableIndex}
           size="small"
           aria-controls={open ? 'split-button-menu' : undefined}
           aria-expanded={open ? 'true' : undefined}
-          aria-label="select merge strategy"
+          aria-label="select create event option"
           aria-haspopup="menu"
           onClick={handleToggle}
         >
