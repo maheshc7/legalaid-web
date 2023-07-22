@@ -23,7 +23,7 @@ export default function Home() {
   };
 
   return (
-    <Layout>
+    <Layout home>
       <Head>
         <title>{siteTitle}</title>
       </Head>
