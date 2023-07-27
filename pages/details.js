@@ -108,12 +108,12 @@ export default function Main() {
         ...selectedContacts,
         { name: newEmail, address: newEmail },
       ]);
-      if (!validateEmail(newEmail)){
-        setContactError(true)
-        console.log(contactError)
+      if (!validateEmail(newEmail)) {
+        setContactError(true);
+        console.log(contactError);
       }
     } else if (reason === "removeOption") {
-      console.log("in ", reason, value)
+      console.log("in ", reason, value);
       setContactError(false); //Set to false assuming user removed the faulty email
       //Check if any of the remaining values are still invalid.
       if (value.some((contact) => !validateEmail(contact.address))) {
@@ -121,7 +121,7 @@ export default function Main() {
       }
       setSelectedContacts(value);
     } else if (reason === "clear") {
-      setContactError(false)
+      setContactError(false);
       setSelectedContacts(value);
     } else {
       setSelectedContacts(value);
@@ -417,9 +417,11 @@ END:VEVENT`;
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip
-                    {...console.log("Chip", option)}
+                      {...console.log("Chip", option)}
                       variant="outlined"
-                      color={validateEmail(option.address) ? "default" : "error"}
+                      color={
+                        validateEmail(option.address) ? "default" : "error"
+                      }
                       label={option.name}
                       {...getTagProps({ index })}
                     />
@@ -431,8 +433,8 @@ END:VEVENT`;
                 getOptionLabel={(option) =>
                   typeof option === "string" ? option : option.name
                 }
-                isOptionEqualToValue={(option, value) => 
-                  option.address === value.address //
+                isOptionEqualToValue={
+                  (option, value) => option.address === value.address //
                 }
                 renderOption={(props, option) => (
                   <List {...props}>
