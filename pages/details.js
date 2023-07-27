@@ -13,6 +13,7 @@ import {
   Backdrop,
   Typography,
   Fade,
+  Chip,
 } from "@mui/material";
 import Autocomplete from "@mui/material/Autocomplete";
 import CaseDetails from "../components/CaseDetail";
@@ -48,6 +49,7 @@ export default function Main() {
   const [caseDetail, setCaseDetail] = useState(null);
   const [contactList, setContactList] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]);
+  const [contactError, setContactError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatable, setIsCreatable] = useState(false);
   const [eventStatus, setEventStatus] = useState("editing");
@@ -73,10 +75,11 @@ export default function Main() {
   useEffect(() => {
     async function fetchFilteredContacts() {
       try {
-        const filteredContacts = await getFilteredContacts(
+        var filteredContacts = await getFilteredContacts(
           app.authProvider,
           searchQuery
         );
+        console.log("Filtered: ", filteredContacts);
         setContactList(filteredContacts);
       } catch (error) {
         app.displayError("Error fetching contacts", error.message);
@@ -89,9 +92,40 @@ export default function Main() {
     }
   }, [searchQuery]);
 
+  const validateEmail = (email) => {
+    // Regular expression for email validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return emailRegex.test(email);
+  };
+
   const handleContactChange = (event, value, reason) => {
-    //even: onClick, value: latest value in the text field, reason: select, add or remove
-    setSelectedContacts(value);
+    //event: onClick, value: latest value in the text field, reason: select, add or remove
+    console.log(reason, value);
+    if (reason === "createOption") {
+      // If the user typed a custom value, add it to the selectedContacts state
+      const newEmail = value.pop();
+      setSelectedContacts([
+        ...selectedContacts,
+        { name: newEmail, address: newEmail },
+      ]);
+      if (!validateEmail(newEmail)){
+        setContactError(true)
+        console.log(contactError)
+      }
+    } else if (reason === "removeOption") {
+      console.log("in ", reason, value)
+      setContactError(false); //Set to false assuming user removed the faulty email
+      //Check if any of the remaining values are still invalid.
+      if (value.some((contact) => !validateEmail(contact.address))) {
+        setContactError(true);
+      }
+      setSelectedContacts(value);
+    } else if (reason === "clear") {
+      setContactError(false)
+      setSelectedContacts(value);
+    } else {
+      setSelectedContacts(value);
+    }
   };
 
   const handleEventChange = (index, values) => {
@@ -168,6 +202,7 @@ export default function Main() {
           calendarId,
           calendarPermission
         );
+        console.log(calendarResponse);
       }
       console.log("User Timezone: ", app.user.timeZone);
       var batchRequests = eventDetails.map((newEvent) => {
@@ -372,36 +407,54 @@ END:VEVENT`;
 
         <Grid sm={12} md={6} lg={3}>
           <Stack spacing={1.5}>
-            {isAuthenticated?<Autocomplete
-              multiple
-              filterSelectedOptions
-              options={contactList}
-              value={selectedContacts}
-              noOptionsText="Start typing the name/email"
-              onChange={handleContactChange}
-              onInputChange={(event, value) => setSearchQuery(value)}
-              getOptionLabel={(option) => option.name}
-              isOptionEqualToValue={(option, value) =>
-                option.address === value.address
-              }
-              renderOption={(props, option) => (
-                <List {...props}>
-                  <ListItem>
-                    <ListItemText
-                      primary={option.name}
-                      secondary={option.address}
+            {isAuthenticated ? (
+              <Autocomplete
+                multiple
+                freeSolo
+                filterSelectedOptions //
+                options={contactList}
+                value={selectedContacts}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip
+                    {...console.log("Chip", option)}
+                      variant="outlined"
+                      color={validateEmail(option.address) ? "default" : "error"}
+                      label={option.name}
+                      {...getTagProps({ index })}
                     />
-                  </ListItem>
-                </List>
-              )}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Attorney Emails"
-                  placeholder="Type or select from list"
-                />
-              )}
-            /> : null}
+                  ))
+                }
+                noOptionsText="Start typing the name/email"
+                onChange={handleContactChange}
+                onInputChange={(event, value) => setSearchQuery(value)}
+                getOptionLabel={(option) =>
+                  typeof option === "string" ? option : option.name
+                }
+                isOptionEqualToValue={(option, value) => 
+                  option.address === value.address //
+                }
+                renderOption={(props, option) => (
+                  <List {...props}>
+                    <ListItem>
+                      <ListItemText
+                        primary={option.name}
+                        secondary={option.address}
+                      />
+                    </ListItem>
+                  </List>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Attorney Emails"
+                    placeholder="Type or select from list"
+                    error={contactError}
+                    helperText={contactError ? "Enter a valid email" : ""}
+                  />
+                )}
+              />
+            ) : null}
 
             <Box
               border={1}
@@ -452,7 +505,7 @@ END:VEVENT`;
         <Button variant="outlined" onClick={() => router.push("/")}>
           New File
         </Button>
-        
+
         <SplitButton
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
