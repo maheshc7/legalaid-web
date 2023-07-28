@@ -417,6 +417,7 @@ END:VEVENT`;
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip
+                      key={index}
                       {...console.log("Chip", option)}
                       variant="outlined"
                       color={
@@ -511,7 +512,7 @@ END:VEVENT`;
         <SplitButton
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
-          disableBtn={!isCreatable || events.length <= 0}
+          disableBtn={!isCreatable || events.length <= 0 || contactError}
           disableIndex={isAuthenticated ? -1 : 1}
         />
       </Stack>
