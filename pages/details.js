@@ -26,9 +26,11 @@ import { useState, useEffect, useRef } from "react";
 import { uploadFileGetEvents } from "../utils/apiHelpers";
 import {
   getFilteredContacts,
-  getCalendars,
+  getCalendar,
   shareCalendar,
-  postEvent,
+  postEventsBatch,
+  getAppEvents,
+  deleteEventsBatch,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
 import ErrorMessage from "../components/ErrorMessage";
@@ -39,6 +41,7 @@ import SplitButton from "../components/SplitButton";
 import { useIsAuthenticated } from "@azure/msal-react";
 
 const splitBtnOptions = ["Download Events", "Add to Outlook"];
+const singleValueExtendedProperty = {id: "String {66f5a359-4659-4830-9070-00050ec6ac6e} Name Source", value: "LegalAid"}
 export default function Main() {
   const router = useRouter();
   const app = useAppContext();
@@ -61,11 +64,10 @@ export default function Main() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
         const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
-        console.log(caseInfo, eventInfo);
         setCaseDetail(caseInfo);
         setEvents(eventInfo);
       } catch (error) {
-        console.log(error);
+        console.error("Error fetching case and event details",error);
         app.displayError("Error fetching data", error.message);
       }
     }
@@ -79,7 +81,6 @@ export default function Main() {
           app.authProvider,
           searchQuery
         );
-        console.log("Filtered: ", filteredContacts);
         setContactList(filteredContacts);
       } catch (error) {
         app.displayError("Error fetching contacts", error.message);
@@ -100,7 +101,6 @@ export default function Main() {
 
   const handleContactChange = (event, value, reason) => {
     //event: onClick, value: latest value in the text field, reason: select, add or remove
-    console.log(reason, value);
     if (reason === "createOption") {
       // If the user typed a custom value, add it to the selectedContacts state
       const newEmail = value.pop();
@@ -110,10 +110,8 @@ export default function Main() {
       ]);
       if (!validateEmail(newEmail)) {
         setContactError(true);
-        console.log(contactError);
       }
     } else if (reason === "removeOption") {
-      console.log("in ", reason, value);
       setContactError(false); //Set to false assuming user removed the faulty email
       //Check if any of the remaining values are still invalid.
       if (value.some((contact) => !validateEmail(contact.address))) {
@@ -152,7 +150,6 @@ export default function Main() {
   };
 
   const handleEventAdd = (event) => {
-    console.log(event);
     event.preventDefault();
     const newEvent = {
       id: events.length + 1,
@@ -169,7 +166,16 @@ export default function Main() {
     newEventRef.scrollIntoView({ behavior: "smooth" });
   };
 
-  async function createEvents() {
+  async function removeOldEvents(calendarId) {
+    try {
+      const oldEventsId = await getAppEvents(app.authProvider, calendarId, singleValueExtendedProperty);
+      await deleteEventsBatch(app.authProvider, calendarId, oldEventsId);
+    } catch (err) {
+      app.displayError("Error removing old events", err);
+    }
+  }
+
+  async function createEvents(calendarId) {
     setIsCreatable(false);
     setEventStatus("processing");
     try {
@@ -181,12 +187,6 @@ export default function Main() {
         type: "required",
       }));
 
-      const calendarId = await getCalendars(
-        app.authProvider,
-        caseDetail.caseNum
-      );
-
-      console.log("Length - Selected Contacts: ", selectedContacts.length);
       if (selectedContacts.length) {
         const calendarPermission = selectedContacts.map((contact) => ({
           emailAddress: {
@@ -196,13 +196,11 @@ export default function Main() {
           role: "write", // Set the desired role for all contacts
         }));
 
-        console.log(calendarPermission);
-
         const calendarResponse = await shareCalendar(
           calendarId,
           calendarPermission
         );
-        console.log(calendarResponse);
+
       }
       console.log("User Timezone: ", app.user.timeZone);
       var batchRequests = eventDetails.map((newEvent) => {
@@ -210,22 +208,24 @@ export default function Main() {
         var startDate = new Date(dateOnly);
         var endDate = new Date(dateOnly);
         endDate.setDate(endDate.getDate() + 1);
-        console.log(dateOnly, startDate, endDate);
-
+        const newDescription =
+          newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
         const eventPayload = {
           subject: newEvent.subject,
           body: {
-            contentType: "HTML",
-            content: newEvent.description,
+            contentType: "Text",
+            content: newDescription,
           },
           start: {
-            dateTime: startDate,
+            dateTime: dateOnly,
             timeZone: app.user.timeZone,
           },
           end: {
-            dateTime: endDate,
+            dateTime: endDate.toISOString().split("T")[0]+" 00:00:00",
             timeZone: app.user.timeZone,
           },
+          isAllDay: true,
+          singleValueExtendedProperties: [singleValueExtendedProperty] //unique identifier for events created by the LegalAid app.
           // attendees: attendees, //commenting for now. Attendees get invite to the calendar.
           // other event details
         };
@@ -237,14 +237,13 @@ export default function Main() {
           body: eventPayload,
           headers: {
             "Content-Type": "application/json",
+            // "Prefer": `IdType="ImmutableId"`,
           },
           transactionId: caseDetail.caseNum, //what if they run again and it fails? Do the previous events get removed? Should be sent in batch
         };
       });
-      console.log(batchRequests);
-      console.log("Batch Request Length: ", batchRequests.length);
 
-      await postEvent(app.authProvider, batchRequests);
+      postEventsBatch(app.authProvider, batchRequests);
       //after successfully creating events.
       setEventStatus("success");
       setTimeout(() => {
@@ -270,6 +269,8 @@ X-WR-TIMEZONE:${app.user.timezone}`;
       var startDate = new Date(dateOnly);
       var endDate = new Date(dateOnly);
       endDate.setDate(endDate.getDate() + 1);
+      const newDescription =
+        newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
 
       icsContent += `
 BEGIN:VEVENT
@@ -277,7 +278,7 @@ UID:${eventDetails.id}
 DTSTART:${startDate.toISOString().substring(0, 10).replaceAll("-", "")}
 DTEND:${endDate.toISOString().substring(0, 10).replaceAll("-", "")}
 SUMMARY:${eventDetails.subject}
-DESCRIPTION:${eventDetails.description}
+DESCRIPTION:${newDescription}
 END:VEVENT`;
     });
 
@@ -306,12 +307,25 @@ END:VEVENT`;
   async function handleSplitButtonClick(index) {
     switch (index) {
       case 0:
-        console.log("Download .ics file");
         handleExportICS();
         break;
 
       case 1:
-        createEvents();
+        try{
+          const calendar = await getCalendar(
+            app.authProvider,
+            caseDetail.caseNum
+          );
+    
+          if(!calendar.isNew){
+            //If calendar exists already, delete old events created by LegalAid (if any)
+            await removeOldEvents(calendar.id);
+          }
+          await createEvents(calendar.id);
+
+        } catch (err) {
+          app.displayError("Error Getting Calendar", err);
+        }
         break;
 
       default:
@@ -418,7 +432,6 @@ END:VEVENT`;
                   value.map((option, index) => (
                     <Chip
                       key={index}
-                      {...console.log("Chip", option)}
                       variant="outlined"
                       color={
                         validateEmail(option.address) ? "default" : "error"
