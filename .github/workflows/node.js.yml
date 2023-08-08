@@ -1,18 +1,20 @@
 # This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
 
-name: Build Status
+name: Build and Test
 
 on:
   push:
-    # branches: [ main ]
+    branches:
+      - main
   pull_request:
-    # branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
@@ -20,18 +22,22 @@ jobs:
         node-version: [14.x]
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js ${{ matrix.node-version }} on ${{ matrix.os }}
-      uses: actions/setup-node@v1
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v2
       with:
         node-version: ${{ matrix.node-version }}
 
-    # basically npm install but only installs from package-lock
-    - run: npm ci
-    - run: npm run lint
-    - run: npm t
+    - name: Install dependencies
+      run: npm install
 
-    # Only run the coverage once
+    - name: Build and test
+      run: npm run build
+      env:
+        CI: true
+
     - if: ${{ matrix.node-version == '14.x' }}
       name: Get Coverage for badge
       run: |
@@ -64,6 +70,7 @@ jobs:
         echo $BRANCH_NAME
         # process.env.BRANCH = 'pull_27';
         echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
+
     - if: ${{ matrix.node-version == '14.x' }}
       name: Create the Badge
       uses: schneegans/dynamic-badges-action@v1.0.0
