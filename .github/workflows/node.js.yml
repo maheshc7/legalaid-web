@@ -72,6 +72,16 @@ jobs:
         echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
 
     - if: ${{ matrix.node-version == '18.x' }}
+      name: Calculate Coverage
+      run: |
+        COVERAGE="$(npm test -- --coverageReporters='text-summary' | tail -2 | head -1)"
+        TOKENS=($COVERAGE)
+        if [ -z "${TOKENS[2]}" ]; then
+          COVERAGE="0%"
+        fi
+        echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+
+    - if: ${{ matrix.node-version == '18.x' }}
       name: Create the Badge
       uses: schneegans/dynamic-badges-action@v1.0.0
       with:
@@ -79,6 +89,6 @@ jobs:
         gistID: cdc60bed264cf5afd17e322cee8feee2
         filename: legalaid-web__${{ env.BRANCH }}.json
         label: Test Coverage
-        message: ${{ env.COVERAGE }}
+        message: ${{ env.COVERAGE }}  # Set to 0% if COVERAGE is empty
         color: green
         namedLogo: jest
