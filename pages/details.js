@@ -275,7 +275,7 @@ X-WR-TIMEZONE:${app.user.timezone}`;
       var endDate = new Date(dateOnly);
       endDate.setDate(endDate.getDate() + 1);
       const newDescription =
-        eventDetails.description + "\n\n\n\n {Event created by: LegalAid}";
+        newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
 
       icsContent += `
 BEGIN:VEVENT
