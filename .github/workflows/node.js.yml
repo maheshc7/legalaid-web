@@ -89,6 +89,6 @@ jobs:
         gistID: cdc60bed264cf5afd17e322cee8feee2
         filename: legalaid-web__${{ env.BRANCH }}.json
         label: Test Coverage
-        message: ${{ env.COVERAGE := env.COVERAGE || '0%' }}  # Set to 0% if COVERAGE is empty
+        message: ${{ env.COVERAGE }}  # Set to 0% if COVERAGE is empty
         color: green
         namedLogo: jest
