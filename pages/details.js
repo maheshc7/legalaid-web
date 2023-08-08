@@ -377,7 +377,7 @@ END:VEVENT`;
                 color="textSecondary"
                 mt={2}
               >
-                Check you Outlook calendar.
+                Check your Outlook calendar.
               </Typography>
               <Typography
                 variant="body1"
