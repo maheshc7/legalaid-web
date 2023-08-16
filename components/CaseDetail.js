@@ -4,17 +4,22 @@ import TextField from "@mui/material/TextField";
 import EDButton from "./EditDeleteButtonControl";
 import { Typography } from "@mui/material";
 
-export default function CaseDetails({ caseDetail }) {
+export default function CaseDetails({ caseDetail, updateCaseDetail }) {
   const [isEditable, setIsEditable] = useState(false);
-  const [court, setCourt] = useState(caseDetail.court);
-  const [caseNum, setCaseNum] = useState(caseDetail.caseNum);
-  const [plaintiff, setPlaintiff] = useState(caseDetail.plaintiff);
-  const [defendant, setDefendant] = useState(caseDetail.defendant);
+  const [caseInfo, setCaseInfo] = useState(caseDetail);
 
   const handleSaveClick = () => {
-    if (court && caseNum && plaintiff && defendant) {
+    if (caseInfo.court && caseInfo.caseNum && caseInfo.plaintiff && caseInfo.defendant) {
+      updateCaseDetail(caseInfo);
       setIsEditable(false);
     }
+  };
+
+  const updateField = (field, value) => {
+    setCaseInfo((prevCaseInfo) => ({
+      ...prevCaseInfo,
+      [field]: value,
+    }));
   };
 
   return (
@@ -37,40 +42,40 @@ export default function CaseDetails({ caseDetail }) {
 
       <TextField
         multiline
-        error={!court.trim()}
+        error={!caseInfo.court.trim()}
         label="Court"
         size="small"
         margin="normal"
         fullWidth={true}
-        value={court}
-        onChange={(e) => setCourt(e.target.value)}
+        value={caseInfo.court}
+        onChange={(e) => updateField("court", e.target.value)}//{(e) => setCourt(e.target.value)}
         disabled={!isEditable}
       />
       <TextField
-        error={!caseNum.trim()}
+        error={!caseInfo.caseNum.trim()}
         label="Case Number"
         size="small"
         margin="normal"
-        value={caseNum}
-        onChange={(e) => setCaseNum(e.target.value)}
+        value={caseInfo.caseNum}
+        onChange={(e) => updateField("caseNum", e.target.value)}//{(e) => setCaseNum(e.target.value)}
         disabled={!isEditable}
       />
       <TextField
-        error={!plaintiff.trim()}
+        error={!caseInfo.plaintiff.trim()}
         label="Plaintiff"
         size="small"
         margin="normal"
-        value={plaintiff}
-        onChange={(e) => setPlaintiff(e.target.value)}
+        value={caseInfo.plaintiff}
+        onChange={(e) => updateField("plaintiff", e.target.value)}//{(e) => setPlaintiff(e.target.value)}
         disabled={!isEditable}
       />
       <TextField
-        error={!defendant.trim()}
+        error={!caseInfo.defendant.trim()}
         label="Defendant"
         size="small"
         margin="normal"
-        value={defendant}
-        onChange={(e) => setDefendant(e.target.value)}
+        value={caseInfo.defendant}
+        onChange={(e) => updateField("defendant", e.target.value)}//{(e) => setDefendant(e.target.value)}
         disabled={!isEditable}
       />
     </>
