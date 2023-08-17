@@ -4,7 +4,6 @@
 name: Build and Test
 
 on:
-  push:
   pull_request:
 
 jobs:
@@ -49,33 +48,19 @@ jobs:
         # ];
         # SUMMARY = SUMMARY.split('\n')[5]; // 'Lines        : 31.93% ( 38/119 )'
         # SUMMARY = SUMMARY.split(':')[1].split('(')[0].trim(); // '31.93%'
-        SUMMARY="$(npm test -- --coverageReporters='text-summary' | tail -2 | head -1)"
+        SUMMARY="$(npm test -- --coverageReporters='text-summary' --watchAll=false | tail -2 | head -1)"
         TOKENS=($SUMMARY)
-        # process.env.COVERAGE = '31.93%';
-        echo "COVERAGE=$(echo ${TOKENS[2]})" >> $GITHUB_ENV
-
-        # var REF = 'refs/pull/27/merge.json';
-        REF=${{ github.ref }}
-        # console.log('github.ref: ' + REF);
-        echo "github.ref: $REF"
-        # var PATHS = REF.split('/');
-        IFS='/' read -ra PATHS <<< "$REF"
-        # var BRANCH_NAME = PATHS[1] + '_' + PATHS[2];
-        BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
-        # console.log(BRANCH_NAME); // 'pull_27'
-        echo $BRANCH_NAME
-        # process.env.BRANCH = 'pull_27';
-        echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
-
-    - if: ${{ matrix.node-version == '18.x' }}
-      name: Calculate Coverage
-      run: |
-        COVERAGE="$(npm test -- --coverageReporters='text-summary' | tail -2 | head -1)"
-        TOKENS=($COVERAGE)
         if [ -z "${TOKENS[2]}" ]; then
           COVERAGE="0%"
+        else
+          COVERAGE="${TOKENS[2]}"
         fi
         echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
+        REF=${{ github.ref }}
+        IFS='/' read -ra PATHS <<< "$REF"
+        BRANCH_NAME="${PATHS[1]}_${PATHS[2]}"
+        echo $BRANCH_NAME
+        echo "BRANCH=$(echo ${BRANCH_NAME})" >> $GITHUB_ENV
 
     - if: ${{ matrix.node-version == '18.x' }}
       name: Create the Badge

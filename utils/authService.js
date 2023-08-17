@@ -1,6 +1,7 @@
 import { Client } from "@microsoft/microsoft-graph-client";
 
 let graphClient = undefined;
+let batchSize = 20;
 
 function ensureClient(authProvider) {
   if (!graphClient) {
@@ -32,36 +33,30 @@ export async function getUserTimeZone(authProvider) {
 
   // Return the /me API endpoint result as a User object
   const timeZone = await graphClient.api("/me/mailboxSettings/timeZone").get();
-  console.log(timeZone);
   return timeZone.value;
 }
 // </GetUserSnippet>
 
 // <CalendarSnippet>
-export async function getCalendars(authProvider, calendarName) {
+export async function getCalendar(authProvider, calendarName) {
   ensureClient(authProvider);
-
   // Get the calendar if it exists
   var calendar = await graphClient
     .api("/me/calendars")
     .filter(`name eq '${calendarName}'`)
     .select("id")
     .get();
-  console.log(calendar, calendar.value, calendar.value.length);
-  console.log(!calendar, calendar === undefined, !calendar.value.length);
+
   if (!calendar || calendar === undefined || !calendar.value.length) {
     // If calendar doesn't exist, create a new calendar
-    console.log(calendar);
     calendar = await graphClient.api("/me/calendars").post({
       name: calendarName,
     });
 
-    console.log(calendar);
-
-    return calendar.id;
+    return {id: calendar.id, isNew: true};
   }
 
-  return calendar.value[0].id;
+  return {id: calendar.value[0].id, isNew: false};
 }
 
 export async function shareCalendar(calendarId, calendarPermission) {
@@ -130,10 +125,8 @@ export async function getFilteredContacts(authProvider, query) {
 // </GetContactsSnippet>
 
 // <CreateEventSnippet>
-export async function postEvent(authProvider, requests) {
+export async function postEventsBatch(authProvider, requests) {
   ensureClient(authProvider);
-
-  const batchSize = 20;
   const totalRequests = requests.length;
   const totalBatches = Math.ceil(totalRequests / batchSize);
 
@@ -142,9 +135,81 @@ export async function postEvent(authProvider, requests) {
     const endIndex = Math.min(startIndex + batchSize, totalRequests);
     const batchRequests = { requests: requests.slice(startIndex, endIndex) };
 
-    console.log(batchRequests);
+    const response = await graphClient.api("/$batch").post(batchRequests);
 
-    await graphClient.api("/$batch").post(batchRequests);
+    const hasErrors = response.responses.some(batchResponse => batchResponse.status >= 400);
+    if (hasErrors) {
+      const errorResponses = response.responses.filter(batchResponse => batchResponse.status >= 400);
+      const errorMessages = errorResponses.map(errorResponse => errorResponse.body);
+      console.error(`Batch request failed with errors: ${errorMessages.join(", ")}`);
+    }
   }
 }
 // </CreateEventSnippet>
+
+// <GetEventSnippet>
+export async function getAppEvents(authProvider, calendarId, singleValueExtendedProperty) {
+  ensureClient(authProvider);
+
+  let allEvents = [];
+  let nextPageLink = null;
+  let query = graphClient
+      .api(`/me/calendars/${calendarId}/events`)
+      .select("id, subject, bodyPreview")
+      .filter(`singleValueExtendedProperties/any(ep:ep/id eq '${singleValueExtendedProperty.id}' AND contains(ep/value, '${singleValueExtendedProperty.value}'))`)
+      .top(50);
+  
+  do {
+    if (nextPageLink) {
+      query = graphClient.api(nextPageLink);
+    }
+    const response = await query.get();
+    allEvents = allEvents.concat(response.value);
+    nextPageLink = response['@odata.nextLink']?.split("https://graph.microsoft.com/v1.0")[1];
+  } while (nextPageLink);
+  const filteredEventIds = allEvents
+    // .filter(event => event.bodyPreview.includes(searchQuery))
+    .map(event => event.id);
+  
+  return filteredEventIds;
+
+}
+// </GetEventSnippet>
+
+// <DeleteEventSnippet>
+export async function deleteEventsBatch(authProvider, calendarId, eventIds) {
+  ensureClient(authProvider);
+  const totalEvents = eventIds.length;
+  const totalBatches = Math.ceil(totalEvents / batchSize);
+
+  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+    const startIndex = batchIndex * batchSize;
+    const endIndex = Math.min(startIndex + batchSize, totalEvents);
+    const batchEventIds = eventIds.slice(startIndex, endIndex);
+
+    const batchRequests = batchEventIds.map(eventId => {
+      return {
+        id: eventId,
+        method: "DELETE",
+        url: `/me/calendars/${calendarId}/events/${eventId}`
+      };
+    });
+    try {
+      const response = await graphClient.api("/$batch").post({ requests: batchRequests });
+      const responses = response.responses;
+
+      responses.forEach((batchResponse, index) => {
+        if (batchResponse.status === 204) {
+          console.log(`Event with ID ${batchRequests[index].id} deleted successfully.`);
+        } else {
+          console.error(`Error deleting event with ID ${batchRequests[index].id}: ${batchResponse.body.error.message}`);
+          console.error(batchResponse);
+        }
+      });
+    } catch (error) {
+      console.error(`Batch request failed: ${error.message}`);
+    }
+  }
+
+}
+// </DeleteEventSnippet>
