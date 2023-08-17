@@ -41,7 +41,7 @@ import SplitButton from "../components/SplitButton";
 import { useIsAuthenticated } from "@azure/msal-react";
 
 const splitBtnOptions = ["Download Events", "Add to Outlook"];
-const singleValueExtendedProperty = {id: "String {66f5a359-4659-4830-9070-00050ec6ac6e} Name Source", value: "LegalAid"
+const singleValueExtendedProperty = {id: "String {66f5a359-4659-4830-9070-00050ec6ac6e} Name Source", value: "LegalAid"}
 export default function Main() {
   const router = useRouter();
   const app = useAppContext();
@@ -200,7 +200,7 @@ export default function Main() {
           calendarId,
           calendarPermission
         );
-        
+
       }
       console.log("User Timezone: ", app.user.timeZone);
       var batchRequests = eventDetails.map((newEvent) => {
@@ -237,7 +237,7 @@ export default function Main() {
           body: eventPayload,
           headers: {
             "Content-Type": "application/json",
-            // "Prefer": `IdType="ImmutableId
+            // "Prefer": `IdType="ImmutableId"`,
           },
           transactionId: caseDetail.caseNum, //what if they run again and it fails? Do the previous events get removed? Should be sent in batch
         };
@@ -484,6 +484,7 @@ END:VEVENT`;
               padding={1}
             >
               {caseDetail ? (
+                <CaseDetails caseDetail={caseDetail} updateCaseDetail={setCaseDetail} />
               ) : (
                 <CircularProgress />
               )}
