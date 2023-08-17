@@ -22,6 +22,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail }) {
     }));
   };
 
+
   return (
     <>
       <Stack
