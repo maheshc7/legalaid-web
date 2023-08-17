@@ -261,8 +261,13 @@ export default function Main() {
 VERSION:2.0
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:${caseDetail.caseNum}
+X-WR-CALNAME:${caseDetail.caseNum}`;
+
+//If user has logged in, then we can add the timezone
+    if (app.user && app.user.timeZone){
+      icsContent +=`
 X-WR-TIMEZONE:${app.user.timezone}`;
+    }
 
     events.forEach((eventDetails) => {
       const dateOnly = eventDetails.date.format("YYYY-MM-DD") + " 00:00:00";
@@ -270,7 +275,7 @@ X-WR-TIMEZONE:${app.user.timezone}`;
       var endDate = new Date(dateOnly);
       endDate.setDate(endDate.getDate() + 1);
       const newDescription =
-        newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
+        eventDetails.description + "\n\n\n\n {Event created by: LegalAid}";
 
       icsContent += `
 BEGIN:VEVENT
@@ -479,7 +484,7 @@ END:VEVENT`;
               padding={1}
             >
               {caseDetail ? (
-                <CaseDetails caseDetail={caseDetail} />
+                <CaseDetails caseDetail={caseDetail} updateCaseDetail={setCaseDetail} />
               ) : (
                 <CircularProgress />
               )}
