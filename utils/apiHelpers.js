@@ -54,6 +54,54 @@ export async function uploadFile(file) {
     throw error;
   }
 }
+
+export const generateICSContent = (app, events, calname) => {
+  let icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:${calname}`;
+
+//If user has logged in, then we can add the timezone
+  if (app.user && app.user.timeZone){
+    icsContent +=`
+X-WR-TIMEZONE:${app.user.timezone}`;
+  }
+
+  events.forEach((eventDetails) => {
+    const dateOnly = eventDetails.date.format("YYYY-MM-DD") + " 00:00:00";
+    var startDate = new Date(dateOnly);
+    var endDate = new Date(dateOnly);
+    endDate.setDate(endDate.getDate() + 1);
+    const newDescription =
+      eventDetails.description + "\n\n\n\n {Event created by: LegalAid}";
+
+    icsContent += `
+BEGIN:VEVENT
+UID:${eventDetails.id}
+DTSTART:${startDate.toISOString().substring(0, 10).replaceAll("-", "")}
+DTEND:${endDate.toISOString().substring(0, 10).replaceAll("-", "")}
+SUMMARY:${eventDetails.subject}
+DESCRIPTION:${newDescription}
+END:VEVENT`;
+  });
+
+  icsContent += "\nEND:VCALENDAR";
+  return icsContent;
+};
+
+export const downloadICSFile = (icsContent, fileName) => {
+  const blob = new Blob([icsContent], {
+    type: "text/calendar;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
 /*
 // Function to get list of events for given task id
 export async function getEvents(id) {

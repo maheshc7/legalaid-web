@@ -11,13 +11,11 @@ export default function Home() {
   const app = useAppContext();
 
   const handleSelectFile = (file) => {
-    console.log("Calling handleSelectFile");
     app.storeFile(file);
   };
 
   const handleUploadFile = () => {
     uploadFile(app.selectedFile).then((taskId) => {
-      console.log(taskId);
       router.push({ pathname: "/details", query: { taskId: taskId } });
     });
   };
@@ -34,7 +32,7 @@ export default function Home() {
         onUpload={handleUploadFile}
       />
 
-      <ErrorMessage home/>
+      {/* <ErrorMessage home/> */}
     </Layout>
   );
 }

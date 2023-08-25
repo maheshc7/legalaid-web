@@ -23,7 +23,7 @@ import Layout from "../components/Layout.js";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState, useEffect, useRef } from "react";
-import { uploadFileGetEvents } from "../utils/apiHelpers";
+import { uploadFileGetEvents, generateICSContent, downloadICSFile } from "../utils/apiHelpers";
 import {
   getFilteredContacts,
   getCalendar,
@@ -57,7 +57,7 @@ export default function Main() {
   const [isCreatable, setIsCreatable] = useState(false);
   const [eventStatus, setEventStatus] = useState("editing");
   const taskId = router.query.taskId;
-  const scrollRef = useRef(null);
+  const scrollRef = useRef();
 
   useEffect(() => {
     async function fetchData() {
@@ -162,8 +162,9 @@ export default function Main() {
     setIsCreatable(false);
 
     // Scroll to the new component
-    const newEventRef = scrollRef.current.lastElementChild;
-    newEventRef.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => {
+      scrollRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    }, 200);
   };
 
   async function removeOldEvents(calendarId) {
@@ -256,56 +257,8 @@ export default function Main() {
     }
   }
 
-  const generateICSContent = (events) => {
-    let icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-X-WR-CALNAME:${caseDetail.caseNum}`;
-
-//If user has logged in, then we can add the timezone
-    if (app.user && app.user.timeZone){
-      icsContent +=`
-X-WR-TIMEZONE:${app.user.timezone}`;
-    }
-
-    events.forEach((eventDetails) => {
-      const dateOnly = eventDetails.date.format("YYYY-MM-DD") + " 00:00:00";
-      var startDate = new Date(dateOnly);
-      var endDate = new Date(dateOnly);
-      endDate.setDate(endDate.getDate() + 1);
-      const newDescription =
-        eventDetails.description + "\n\n\n\n {Event created by: LegalAid}";
-
-      icsContent += `
-BEGIN:VEVENT
-UID:${eventDetails.id}
-DTSTART:${startDate.toISOString().substring(0, 10).replaceAll("-", "")}
-DTEND:${endDate.toISOString().substring(0, 10).replaceAll("-", "")}
-SUMMARY:${eventDetails.subject}
-DESCRIPTION:${newDescription}
-END:VEVENT`;
-    });
-
-    icsContent += "\nEND:VCALENDAR";
-    return icsContent;
-  };
-
-  const downloadICSFile = (icsContent, fileName) => {
-    const blob = new Blob([icsContent], {
-      type: "text/calendar;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   const handleExportICS = () => {
-    const icsContent = generateICSContent(eventDetails);
+    const icsContent = generateICSContent(app, eventDetails, caseDetail.caseNum);
     downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
   };
 
@@ -430,7 +383,7 @@ END:VEVENT`;
               <Autocomplete
                 multiple
                 freeSolo
-                filterSelectedOptions //
+                filterSelectedOptions
                 options={contactList}
                 value={selectedContacts}
                 renderTags={(value, getTagProps) =>
@@ -495,7 +448,6 @@ END:VEVENT`;
         <Grid sm={12} md={6} lg={3}>
           <Box
             id="event_box"
-            ref={scrollRef}
             component="div"
             sx={{ height: "600px", overflow: "auto" }}
           >
@@ -530,7 +482,7 @@ END:VEVENT`;
         <SplitButton
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
-          disableBtn={!isCreatable || events.length <= 0 || contactError}
+          disableBtn={!isCreatable || !(events && events.length > 0) || contactError}
           disableIndex={isAuthenticated ? -1 : 1}
         />
       </Stack>
