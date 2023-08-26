@@ -22,16 +22,18 @@ jest.mock('../utils/apiHelpers', () => ({
     uploadFile: jest.fn(),
 }));
 
+// Mock the context values
+const mockAppContext = {
+  selectedFile: null,
+  storeFile: jest.fn(),
+  displayError: jest.fn(),
+  clearError: jest.fn(),
+};
+
+// Mock the useAppContext hook's return value
+useAppContext.mockReturnValue(mockAppContext);
 
 test('renders Home component', () => {
-  // Mock the context values
-  const mockAppContext = {
-    selectedFile: null,
-    storeFile: jest.fn(),
-  };
-
-  // Mock the useAppContext hook's return value
-  useAppContext.mockReturnValue(mockAppContext);
 
   render(<Home />);
 
@@ -43,20 +45,12 @@ test('renders Home component', () => {
 
 
 test('handles file selection and upload', async () => {
-    // Mock the context values
-    let mockAppContext = {
-      selectedFile: null,
-      storeFile: jest.fn(),
-    };
 
     const mockPush = jest.fn(); // Mock the push function
     
     useRouter.mockReturnValue({
       push: mockPush,
     });
-  
-    // Mock the useAppContext hook's return value
-    useAppContext.mockReturnValue(mockAppContext);
   
     // Mock the uploadFile function to return a taskId
     const mockTaskId = 'mocked-task-id';

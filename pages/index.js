@@ -32,7 +32,7 @@ export default function Home() {
         onUpload={handleUploadFile}
       />
 
-      {/* <ErrorMessage home/> */}
+      <ErrorMessage home/>
     </Layout>
   );
 }
