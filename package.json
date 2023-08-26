@@ -5,7 +5,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "jest --watch"
+    "test": "jest",
+    "test:snapshots": "jest --updateSnapshot"
   },
   "dependencies": {
     "@azure/msal-browser": "^2.37.0",
