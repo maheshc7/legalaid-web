@@ -6,7 +6,7 @@ import { TextField, Stack } from "@mui/material";
 import Grid from "@mui/material/Unstable_Grid2";
 import EDButton from "./EditDeleteButtonControl";
 
-export default function EventDetail({ entry, onChange, onDelete }) {
+export default function EventDetail({ entry, onChange, onDelete, scrollToRef}) {
   const [isEditable, setIsEditable] = useState(false);
   const [subjectError, setSubjectError] = useState(!entry.subject.trim());
   const [descError, setDescError] = useState(!entry.description.trim());
@@ -96,7 +96,7 @@ export default function EventDetail({ entry, onChange, onDelete }) {
           </Stack>
         </Grid>
       </Grid>
-      <Grid xs={12} md={12} lg={12} paddingRight={1}>
+      <Grid xs={12} md={12} lg={12} paddingRight={1} ref={scrollToRef}>
         <TextField
           multiline
           minRows={3}
