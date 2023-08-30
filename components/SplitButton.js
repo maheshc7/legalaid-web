@@ -15,7 +15,6 @@ export default function SplitButton({options, onClick, disableBtn, disableIndex}
   const [selectedIndex, setSelectedIndex] = React.useState(0);
 
   const handleClick = () => {
-    console.info(`You clicked ${options[selectedIndex]}`);
     onClick(selectedIndex);
   };
 
