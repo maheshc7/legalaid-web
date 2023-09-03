@@ -2,6 +2,10 @@ import { Client } from "@microsoft/microsoft-graph-client";
 
 let graphClient = undefined;
 let batchSize = 20;
+let singleValueExtendedProperty = {
+  id: "String {66f5a359-4659-4830-9070-00050ec6ac6e} Name Source",
+  value: "LegalAid",
+};
 
 function ensureClient(authProvider) {
   if (!graphClient) {
@@ -53,42 +57,36 @@ export async function getCalendar(authProvider, calendarName) {
       name: calendarName,
     });
 
-    return {id: calendar.id, isNew: true};
+    return { id: calendar.id, isNew: true };
   }
 
-  return {id: calendar.value[0].id, isNew: false};
+  return { id: calendar.value[0].id, isNew: false };
 }
 
 export async function shareCalendar(calendarId, calendarPermission) {
   var id = 0;
-  const batchRequest = {
-    requests: calendarPermission.map((permission) => ({
-      method: "POST",
-      url: `/me/calendars/${calendarId}/calendarPermissions`,
-      body: permission,
-      id: id++,
-      headers: {
-        "Content-Type": "application/json",
-      },
-    })),
-  };
+  const requests = calendarPermission.map((permission) => {
+      return{
+        method: "POST",
+        url: `/me/calendars/${calendarId}/calendarPermissions`,
+        body: permission,
+        id: id++,
+        headers: {
+          "Content-Type": "application/json",
+        }
+      }
+    });
 
-  const batchRequestString = JSON.stringify(batchRequest);
-
-  await graphClient.api("/$batch").post(batchRequestString);
-  // const response = await graphClient.api(`/me/calendars/${calendarId}/calendarPermissions`)
-  //   .post(calendarPermission);
+  const response = batchRequests(requests);
 }
+// </CalendarSnippet>
 
 // <GetContactsSnippet>
 export async function getContacts(authProvider) {
   ensureClient(authProvider);
 
-  // GET /me/people
-  // JSON representation of the new event is sent in the
-  // request body
   var response = await graphClient.api("/me/people").get();
-  //TO DO: Add iterator.
+  //TODO: Add iterator.
 
   const contactList = response.value.map(
     ({ displayName, scoredEmailAddresses: [{ address }] }) => ({
@@ -104,9 +102,6 @@ export async function getFilteredContacts(authProvider, query) {
   // Make an API call to fetch filtered contacts based on the query
   ensureClient(authProvider);
 
-  // GET /me/people
-  // JSON representation of the new event is sent in the
-  // request body
   var response = await graphClient
     .api("/me/people")
     .select("displayName,scoredEmailAddresses")
@@ -124,92 +119,197 @@ export async function getFilteredContacts(authProvider, query) {
 }
 // </GetContactsSnippet>
 
-// <CreateEventSnippet>
-export async function postEventsBatch(authProvider, requests) {
+// <CRUDEventsSnippet>
+export async function postEvents(
+  authProvider,
+  timeZone,
+  eventDetails,
+  selectedContacts,
+  calendarId,
+  appUniqueId
+) {
   ensureClient(authProvider);
-  const totalRequests = requests.length;
-  const totalBatches = Math.ceil(totalRequests / batchSize);
+  try{
+    singleValueExtendedProperty.value = appUniqueId;
 
-  for (let i = 0; i < totalBatches; i++) {
-    const startIndex = i * batchSize;
-    const endIndex = Math.min(startIndex + batchSize, totalRequests);
-    const batchRequests = { requests: requests.slice(startIndex, endIndex) };
+    const attendees = selectedContacts.map((contact) => ({
+      emailAddress: {
+        address: contact.address,
+        name: contact.name,
+      },
+      type: "required",
+    }));
 
-    const response = await graphClient.api("/$batch").post(batchRequests);
+    var requests = eventDetails.map((newEvent) => {
+      const startDate = newEvent.date.format("YYYY-MM-DD") + " 00:00:00";
+      var endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 1);
+      const newDescription =
+        newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
+      const eventPayload = {
+        subject: newEvent.subject,
+        body: {
+          contentType: "Text",
+          content: newDescription,
+        },
+        start: {
+          dateTime: startDate,
+          timeZone: timeZone,
+        },
+        end: {
+          dateTime: endDate.toISOString().split("T")[0] + " 00:00:00",
+          timeZone: timeZone,
+        },
+        isAllDay: true,
+        showAs: "free",
+        responseRequested: false,
+        //unique identifier for events created by the LegalAid app.
+        singleValueExtendedProperties: [singleValueExtendedProperty],
+        attendees: attendees,
+        // add other event details
+      };
 
-    const hasErrors = response.responses.some(batchResponse => batchResponse.status >= 400);
-    if (hasErrors) {
-      const errorResponses = response.responses.filter(batchResponse => batchResponse.status >= 400);
-      const errorMessages = errorResponses.map(errorResponse => errorResponse.body);
-      console.error(`Batch request failed with errors: ${errorMessages.join(", ")}`);
-    }
+      return {
+        // Unique identifier for the request
+        id: newEvent.id,
+        method: "POST",
+        url: `/me/calendars/${calendarId}/events`,
+        body: eventPayload,
+        headers: {
+          "Content-Type": "application/json",
+          // "Prefer": `IdType="ImmutableId"`,
+        },
+        transactionId: appUniqueId,
+      };
+    });
+
+    const response = await batchRequests(requests);
+    return response;
+  }catch(err){
+    console.error("Error creating events in Outlook Calendar ",err)
   }
 }
-// </CreateEventSnippet>
 
-// <GetEventSnippet>
-export async function getAppEvents(authProvider, calendarId, singleValueExtendedProperty) {
+export async function updateEvents(authProvider, calendarId, eventIds) {
   ensureClient(authProvider);
+
+  //Usage 
+  // eventsResponse = eventsResponse.responses.filter(event => event.status == 201);
+  // const eventIds = eventsResponse.map(event => event.body.id)
+  // updateEvents(app.authProvider, calendarId, eventIds)
+  var requests = eventIds.map((eventId) => {
+    const eventPayload = {
+      isReminderOn: false,
+    };
+    return {
+      id: eventId,
+      method: "PATCH",
+      url: `/me/calendars/${calendarId}/events/${eventId}`,
+      body: eventPayload,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    };
+  });
+
+  const response = batchRequests(requests);
+}
+
+export async function getAppEvents(
+  authProvider,
+  calendarId,
+  appUniqueId
+) {
+  ensureClient(authProvider);
+
+  singleValueExtendedProperty.value = appUniqueId;
 
   let allEvents = [];
   let nextPageLink = null;
   let query = graphClient
-      .api(`/me/calendars/${calendarId}/events`)
-      .select("id, subject, bodyPreview")
-      .filter(`singleValueExtendedProperties/any(ep:ep/id eq '${singleValueExtendedProperty.id}' AND contains(ep/value, '${singleValueExtendedProperty.value}'))`)
-      .top(50);
-  
+    .api(`/me/calendars/${calendarId}/events`)
+    .select("id, subject, bodyPreview")
+    .filter(
+      `singleValueExtendedProperties/any(ep:ep/id eq '${singleValueExtendedProperty.id}' AND contains(ep/value, '${singleValueExtendedProperty.value}'))`
+    )
+    .top(50);
+
   do {
     if (nextPageLink) {
       query = graphClient.api(nextPageLink);
     }
     const response = await query.get();
     allEvents = allEvents.concat(response.value);
-    nextPageLink = response['@odata.nextLink']?.split("https://graph.microsoft.com/v1.0")[1];
+    nextPageLink = response["@odata.nextLink"]?.split(
+      "https://graph.microsoft.com/v1.0"
+    )[1];
   } while (nextPageLink);
   const filteredEventIds = allEvents
     // .filter(event => event.bodyPreview.includes(searchQuery))
-    .map(event => event.id);
-  
+    .map((event) => event.id);
+
   return filteredEventIds;
-
 }
-// </GetEventSnippet>
 
-// <DeleteEventSnippet>
-export async function deleteEventsBatch(authProvider, calendarId, eventIds) {
+export async function deleteEvents(authProvider, calendarId, eventIds) {
   ensureClient(authProvider);
-  const totalEvents = eventIds.length;
-  const totalBatches = Math.ceil(totalEvents / batchSize);
 
-  for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-    const startIndex = batchIndex * batchSize;
-    const endIndex = Math.min(startIndex + batchSize, totalEvents);
-    const batchEventIds = eventIds.slice(startIndex, endIndex);
+  const requests = eventIds.map((eventId) => {
+    return {
+      id: eventId,
+      method: "DELETE",
+      url: `/me/calendars/${calendarId}/events/${eventId}`,
+    };
+  });
 
-    const batchRequests = batchEventIds.map(eventId => {
-      return {
-        id: eventId,
-        method: "DELETE",
-        url: `/me/calendars/${calendarId}/events/${eventId}`
-      };
+  const response = await batchRequests(requests);
+  if(response && response.responses){
+      response.responses.forEach((batchResponse, index) => {
+      if (batchResponse.status === 204) {
+        console.log(
+          `Event with ID ${requests[index].id} deleted successfully.`
+        );
+      } else {
+        console.error(
+          `Error deleting event with ID ${requests[index].id}: ${batchResponse.body.error.message}`
+        );
+      }
     });
-    try {
-      const response = await graphClient.api("/$batch").post({ requests: batchRequests });
-      const responses = response.responses;
-
-      responses.forEach((batchResponse, index) => {
-        if (batchResponse.status === 204) {
-          console.log(`Event with ID ${batchRequests[index].id} deleted successfully.`);
-        } else {
-          console.error(`Error deleting event with ID ${batchRequests[index].id}: ${batchResponse.body.error.message}`);
-          console.error(batchResponse);
-        }
-      });
-    } catch (error) {
-      console.error(`Batch request failed: ${error.message}`);
-    }
   }
-
 }
-// </DeleteEventSnippet>
+// </CRUDEventsSnippet>
+
+// <BatchRequestSnippet>
+export async function batchRequests(requests) {
+  const totalRequests = requests.length;
+  const totalBatches = Math.ceil(totalRequests / batchSize);
+
+  try{
+    for (let i = 0; i < totalBatches; i++) {
+      const startIndex = i * batchSize;
+      const endIndex = Math.min(startIndex + batchSize, totalRequests);
+      const batchRequests = { requests: requests.slice(startIndex, endIndex) };
+
+      const response = await graphClient.api("/$batch").post(batchRequests);
+      const hasErrors = response.responses.some(
+        (batchResponse) => batchResponse.status >= 400
+      );
+      if (hasErrors) {
+        const errorResponses = response.responses.filter(
+          (batchResponse) => batchResponse.status >= 400
+        );
+        const errorMessages = errorResponses.map(
+          (errorResponse) => errorResponse.body.error.message
+        );
+        console.error(
+          `Batch request failed with errors: ${errorMessages.join(", ")}`
+        );
+      }
+      return response;
+    }
+  }catch(err){
+    console.log("Error creating batch requests ",err);
+    return null;
+  }
+}
+// </BatchRequestSnippet>

@@ -46,9 +46,9 @@ jest.mock('../utils/authService', () => ({
     getContacts: jest.fn(),
     getFilteredContacts: jest.fn(),
     getAppEvents: jest.fn(),
-    deleteEventsBatch: jest.fn(),
-    postEventsBatch: jest.fn(),
-
+    deleteEvents: jest.fn(),
+    postEvents: jest.fn(),
+    updateEvents: jest.fn(),
 }));
 
 const mockFile = new File(['test content'], 'test.pdf', { type: 'application/pdf' });
@@ -215,14 +215,14 @@ describe('Event Handling and Export', () => {
           };
         
         authService.getAppEvents.mockResolvedValue([mockEventDetails.id]);
-        authService.postEventsBatch.mockResolvedValueOnce();
+        authService.postEvents.mockResolvedValueOnce();
         await act(async () => fireEvent.click(createEventBtn));
         
 
         expect(authService.getCalendar).toHaveBeenCalled();
         expect(authService.getAppEvents).toHaveBeenCalled();
-        expect(authService.deleteEventsBatch).toHaveBeenCalledWith(useAppContext.providerAuth, mockCalendar.id, [mockEventDetails.id]);
-        expect(authService.postEventsBatch).toHaveBeenCalled();
+        expect(authService.deleteEvents).toHaveBeenCalledWith(useAppContext.providerAuth, mockCalendar.id, [mockEventDetails.id]);
+        expect(authService.postEvents).toHaveBeenCalled();
 
         const successMessage = await screen.findByText('Process Complete!');
         expect(successMessage).toBeInTheDocument();

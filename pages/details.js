@@ -23,14 +23,17 @@ import Layout from "../components/Layout.js";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState, useEffect, useRef } from "react";
-import { uploadFileGetEvents, generateICSContent, downloadICSFile } from "../utils/apiHelpers";
+import {
+  uploadFileGetEvents,
+  generateICSContent,
+  downloadICSFile,
+} from "../utils/apiHelpers";
 import {
   getFilteredContacts,
   getCalendar,
-  shareCalendar,
-  postEventsBatch,
+  postEvents,
   getAppEvents,
-  deleteEventsBatch,
+  deleteEvents,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
 import ErrorMessage from "../components/ErrorMessage";
@@ -41,7 +44,6 @@ import SplitButton from "../components/SplitButton";
 import { useIsAuthenticated } from "@azure/msal-react";
 
 const splitBtnOptions = ["Download Events", "Add to Outlook"];
-const singleValueExtendedProperty = {id: "String {66f5a359-4659-4830-9070-00050ec6ac6e} Name Source", value: "LegalAid"}
 export default function Main() {
   const router = useRouter();
   const app = useAppContext();
@@ -67,7 +69,7 @@ export default function Main() {
         setCaseDetail(caseInfo);
         setEvents(eventInfo);
       } catch (error) {
-        console.error("Error fetching case and event details",error);
+        console.error("Error fetching case and event details", error);
         app.displayError("Error fetching data", error.message);
       }
     }
@@ -169,82 +171,48 @@ export default function Main() {
 
   async function removeOldEvents(calendarId) {
     try {
-      const oldEventsId = await getAppEvents(app.authProvider, calendarId, singleValueExtendedProperty);
-      await deleteEventsBatch(app.authProvider, calendarId, oldEventsId);
+      const oldEventsId = await getAppEvents(
+        app.authProvider,
+        calendarId,
+        caseDetail.caseNum
+      );
+      await deleteEvents(app.authProvider, calendarId, oldEventsId);
     } catch (err) {
-      app.displayError("Error removing old events", err);
+      app.displayError("Error removing old events", err.message);
+    }
+  }
+
+  async function shareCalendar(calendarId) {
+    if (selectedContacts.length) {
+      const calendarPermission = selectedContacts.map((contact) => ({
+        emailAddress: {
+          name: contact.name,
+          address: contact.address,
+        },
+        role: "write",
+      }));
+
+      const calendarResponse = await shareCalendar(
+        calendarId,
+        calendarPermission
+      );
     }
   }
 
   async function createEvents(calendarId) {
     setIsCreatable(false);
     setEventStatus("processing");
+
     try {
-      const attendees = selectedContacts.map((contact) => ({
-        emailAddress: {
-          address: contact.address,
-          name: contact.name,
-        },
-        type: "required",
-      }));
-
-      if (selectedContacts.length) {
-        const calendarPermission = selectedContacts.map((contact) => ({
-          emailAddress: {
-            name: contact.name,
-            address: contact.address,
-          },
-          role: "write", // Set the desired role for all contacts
-        }));
-
-        const calendarResponse = await shareCalendar(
-          calendarId,
-          calendarPermission
-        );
-
-      }
-      console.log("User Timezone: ", app.user.timeZone);
-      var batchRequests = eventDetails.map((newEvent) => {
-        const dateOnly = newEvent.date.format("YYYY-MM-DD") + " 00:00:00";
-        var startDate = new Date(dateOnly);
-        var endDate = new Date(dateOnly);
-        endDate.setDate(endDate.getDate() + 1);
-        const newDescription =
-          newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
-        const eventPayload = {
-          subject: newEvent.subject,
-          body: {
-            contentType: "Text",
-            content: newDescription,
-          },
-          start: {
-            dateTime: dateOnly,
-            timeZone: app.user.timeZone,
-          },
-          end: {
-            dateTime: endDate.toISOString().split("T")[0]+" 00:00:00",
-            timeZone: app.user.timeZone,
-          },
-          isAllDay: true,
-          singleValueExtendedProperties: [singleValueExtendedProperty] //unique identifier for events created by the LegalAid app.
-          // attendees: attendees, //commenting for now. Attendees get invite to the calendar.
-          // other event details
-        };
-
-        return {
-          id: newEvent.id, // Unique identifier for the request
-          method: "POST",
-          url: `/me/calendars/${calendarId}/events`,
-          body: eventPayload,
-          headers: {
-            "Content-Type": "application/json",
-            // "Prefer": `IdType="ImmutableId"`,
-          },
-          transactionId: caseDetail.caseNum, //what if they run again and it fails? Do the previous events get removed? Should be sent in batch
-        };
-      });
-
-      postEventsBatch(app.authProvider, batchRequests);
+      await postEvents(
+        app.authProvider,
+        app.user.timeZone,
+        eventDetails,
+        selectedContacts,
+        calendarId,
+        caseDetail.caseNum
+      );
+      // TODO: do we call postEvents again if it fails?
       //after successfully creating events.
       setEventStatus("success");
       setTimeout(() => {
@@ -253,41 +221,43 @@ export default function Main() {
     } catch (err) {
       setIsCreatable(true);
       setEventStatus("editing");
-      app.displayError("Error creating event", err);
+      app.displayError("Error creating event", err.message);
     }
   }
 
   const handleExportICS = () => {
-    const icsContent = generateICSContent(app, eventDetails, caseDetail.caseNum);
+    const icsContent = generateICSContent(
+      app,
+      eventDetails,
+      caseDetail.caseNum
+    );
     downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
   };
 
   async function handleSplitButtonClick(index) {
     switch (index) {
-      case 0:
+      case 0: //Download ICS File
         handleExportICS();
         break;
 
-      case 1:
-        try{
+      case 1: //Add to Outlook
+        try {
           const calendar = await getCalendar(
             app.authProvider,
-            caseDetail.caseNum
+            "LegalAid" //caseDetail.caseNum
           );
-    
-          if(!calendar.isNew){
+          if (!calendar.isNew) {
             //If calendar exists already, delete old events created by LegalAid (if any)
             await removeOldEvents(calendar.id);
           }
           await createEvents(calendar.id);
-
         } catch (err) {
-          app.displayError("Error Getting Calendar", err);
+          app.displayError("Error Getting Calendar", err.message);
         }
         break;
 
       default:
-        console.log("Invalid option");
+        console.error("Invalid option");
     }
   }
 
@@ -437,7 +407,10 @@ export default function Main() {
               padding={1}
             >
               {caseDetail ? (
-                <CaseDetails caseDetail={caseDetail} updateCaseDetail={setCaseDetail} />
+                <CaseDetails
+                  caseDetail={caseDetail}
+                  updateCaseDetail={setCaseDetail}
+                />
               ) : (
                 <CircularProgress />
               )}
@@ -482,7 +455,9 @@ export default function Main() {
         <SplitButton
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
-          disableBtn={!isCreatable || !(events && events.length > 0) || contactError}
+          disableBtn={
+            !isCreatable || !(events && events.length > 0) || contactError
+          }
           disableIndex={isAuthenticated ? -1 : 1}
         />
       </Stack>
