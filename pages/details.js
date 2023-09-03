@@ -244,7 +244,7 @@ export default function Main() {
         try {
           const calendar = await getCalendar(
             app.authProvider,
-            "LegalAid" //caseDetail.caseNum
+            "Calendar" //caseDetail.caseNum
           );
           if (!calendar.isNew) {
             //If calendar exists already, delete old events created by LegalAid (if any)
