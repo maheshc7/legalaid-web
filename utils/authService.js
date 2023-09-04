@@ -42,13 +42,13 @@ export async function getUserTimeZone(authProvider) {
 // </GetUserSnippet>
 
 // <CalendarSnippet>
-export async function getCalendar(authProvider, calendarName) {
+export async function getOrCreateCalendar(authProvider, calendarName, userEmail) {
   ensureClient(authProvider);
   // Get the calendar if it exists
   var calendar = await graphClient
     .api("/me/calendars")
     .filter(`name eq '${calendarName}'`)
-    .select("id")
+    .select("id, owner")
     .get();
 
   if (!calendar || calendar === undefined || !calendar.value.length) {
@@ -57,10 +57,10 @@ export async function getCalendar(authProvider, calendarName) {
       name: calendarName,
     });
 
-    return { id: calendar.id, isNew: true };
+    return { id: calendar.id, isNew: true, isOwner: true };
   }
 
-  return { id: calendar.value[0].id, isNew: false };
+  return { id: calendar.value[0].id, isNew: false, isOwner: calendar.value[0].owner.address == userEmail };
 }
 
 export async function updateCalendar(calendarId, calendarPermission) {
@@ -229,9 +229,9 @@ export async function getAppEvents(
   let query = graphClient
     .api(`/me/calendars/${calendarId}/events`)
     .select("id, subject, bodyPreview")
-    .filter(
-      `singleValueExtendedProperties/any(ep:ep/id eq '${singleValueExtendedProperty.id}' AND contains(ep/value, '${singleValueExtendedProperty.value}'))`
-    )
+    // .filter(
+    //   `singleValueExtendedProperties/any(ep:ep/id eq '${singleValueExtendedProperty.id}' AND contains(ep/value, '${singleValueExtendedProperty.value}'))`
+    // )
     .top(50);
 
   do {

@@ -30,7 +30,8 @@ import {
 } from "../utils/apiHelpers";
 import {
   getFilteredContacts,
-  getCalendar,
+  getOrCreateCalendar,
+  updateCalendar,
   postEvents,
   getAppEvents,
   deleteEvents,
@@ -208,6 +209,12 @@ export default function Main() {
     setEventStatus("processing");
 
     try {
+      //Add user as the attendee as well to get the events in their main calendar
+      setSelectedContacts([
+        ...selectedContacts,
+        { name: app.user.displayName, address: app.user.email },
+      ]);
+
       await postEvents(
         app.authProvider,
         app.user.timeZone,
@@ -246,15 +253,18 @@ export default function Main() {
 
       case 1: //Add to Outlook
         try {
-          const calendar = await getCalendar(
+          const calendar = await getOrCreateCalendar(
             app.authProvider,
-            "Calendar" //caseDetail.caseNum
+            caseDetail.caseNum,
+            app.user.email
           );
           if (!calendar.isNew) {
             //If calendar exists already, delete old events created by LegalAid (if any)
             await removeOldEvents(calendar.id);
           }
-          //await shareCalendar(calendar.id);
+          if (calendar.isOwner){
+            await shareCalendar(calendar.id);
+          }
           await createEvents(calendar.id);
         } catch (err) {
           app.displayError("Error Getting Calendar", err.message);
