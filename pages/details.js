@@ -183,19 +183,23 @@ export default function Main() {
   }
 
   async function shareCalendar(calendarId) {
-    if (selectedContacts.length) {
-      const calendarPermission = selectedContacts.map((contact) => ({
-        emailAddress: {
-          name: contact.name,
-          address: contact.address,
-        },
-        role: "write",
-      }));
+    try{
+      if (selectedContacts.length) {
+        const calendarPermission = selectedContacts.map((contact) => ({
+          emailAddress: {
+            name: contact.name,
+            address: contact.address,
+          },
+          role: "write",
+        }));
 
-      const calendarResponse = await shareCalendar(
-        calendarId,
-        calendarPermission
-      );
+        const calendarResponse = await updateCalendar(
+          calendarId,
+          calendarPermission
+        );
+      }
+    }catch(error){
+      app.displayError("Error sharing calendar ", error.message);
     }
   }
 
@@ -250,6 +254,7 @@ export default function Main() {
             //If calendar exists already, delete old events created by LegalAid (if any)
             await removeOldEvents(calendar.id);
           }
+          //await shareCalendar(calendar.id);
           await createEvents(calendar.id);
         } catch (err) {
           app.displayError("Error Getting Calendar", err.message);

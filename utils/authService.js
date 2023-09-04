@@ -63,7 +63,7 @@ export async function getCalendar(authProvider, calendarName) {
   return { id: calendar.value[0].id, isNew: false };
 }
 
-export async function shareCalendar(calendarId, calendarPermission) {
+export async function updateCalendar(calendarId, calendarPermission) {
   var id = 0;
   const requests = calendarPermission.map((permission) => {
       return{
