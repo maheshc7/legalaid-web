@@ -55,7 +55,7 @@ export async function uploadFile(file) {
   }
 }
 
-export const generateICSContent = (app, events, calname) => {
+export const generateICSContent = (app, events, calname, client) => {
   let icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 CALSCALE:GREGORIAN
@@ -81,7 +81,7 @@ BEGIN:VEVENT
 UID:${eventDetails.id}
 DTSTART:${startDate.toISOString().substring(0, 10).replaceAll("-", "")}
 DTEND:${endDate.toISOString().substring(0, 10).replaceAll("-", "")}
-SUMMARY:${eventDetails.subject}
+SUMMARY:${client+ ": " +eventDetails.subject}
 DESCRIPTION:${newDescription}
 END:VEVENT`;
   });

@@ -67,6 +67,7 @@ export default function Main() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
         const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
+        caseInfo.client = ""
         setCaseDetail(caseInfo);
         setEvents(eventInfo);
       } catch (error) {
@@ -221,7 +222,7 @@ export default function Main() {
         eventDetails,
         selectedContacts,
         calendarId,
-        caseDetail.caseNum
+        caseDetail
       );
       // TODO: do we call postEvents again if it fails?
       //after successfully creating events.
@@ -240,7 +241,8 @@ export default function Main() {
     const icsContent = generateICSContent(
       app,
       eventDetails,
-      caseDetail.caseNum
+      caseDetail.caseNum,
+      caseDetail.client
     );
     downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
   };

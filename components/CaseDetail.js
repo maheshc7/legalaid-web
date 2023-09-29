@@ -9,7 +9,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail }) {
   const [caseInfo, setCaseInfo] = useState(caseDetail);
 
   const handleSaveClick = () => {
-    if (caseInfo.court && caseInfo.caseNum && caseInfo.plaintiff && caseInfo.defendant) {
+    if (caseInfo.court && caseInfo.caseNum && caseInfo.client && caseInfo.plaintiff && caseInfo.defendant) {
       updateCaseDetail(caseInfo);
       setIsEditable(false);
     }
@@ -43,11 +43,12 @@ export default function CaseDetails({ caseDetail, updateCaseDetail }) {
 
       <TextField
         multiline
+        maxRows={5}
+        fullWidth={true}
         error={!caseInfo.court.trim()}
         label="Court"
         size="small"
         margin="normal"
-        fullWidth={true}
         value={caseInfo.court}
         onChange={(e) => updateField("court", e.target.value)}//{(e) => setCourt(e.target.value)}
         disabled={!isEditable}
@@ -62,6 +63,21 @@ export default function CaseDetails({ caseDetail, updateCaseDetail }) {
         disabled={!isEditable}
       />
       <TextField
+        multiline
+        maxRows={3}
+        fullWidth={caseInfo.client.trim().length > 20}
+        error={!caseInfo.client.trim()}
+        label="Client"
+        size="small"
+        margin="normal"
+        value={caseInfo.client}
+        onChange={(e) => updateField("client", e.target.value)}//{(e) => setCaseNum(e.target.value)}
+        disabled={!isEditable}
+      />
+      <TextField
+        multiline
+        maxRows={3}
+        fullWidth={caseInfo.plaintiff.trim().length > 20}
         error={!caseInfo.plaintiff.trim()}
         label="Plaintiff"
         size="small"
@@ -71,6 +87,9 @@ export default function CaseDetails({ caseDetail, updateCaseDetail }) {
         disabled={!isEditable}
       />
       <TextField
+        multiline
+        maxRows={3}
+        fullWidth={caseInfo.defendant.trim().length > 20}
         error={!caseInfo.defendant.trim()}
         label="Defendant"
         size="small"
