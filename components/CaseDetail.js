@@ -1,17 +1,22 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Stack from "@mui/material/Stack";
 import TextField from "@mui/material/TextField";
 import EDButton from "./EditDeleteButtonControl";
 import { Typography } from "@mui/material";
 
-export default function CaseDetails({ caseDetail, updateCaseDetail }) {
+export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost }) {
   const [isEditable, setIsEditable] = useState(false);
   const [caseInfo, setCaseInfo] = useState(caseDetail);
+
+  const toggleEdit = (value) => {
+    setIsEditable(value);
+    allowPost(!value);
+  }
 
   const handleSaveClick = () => {
     if (caseInfo.court && caseInfo.caseNum && caseInfo.client && caseInfo.plaintiff && caseInfo.defendant) {
       updateCaseDetail(caseInfo);
-      setIsEditable(false);
+      toggleEdit(false);
     }
   };
 
@@ -20,6 +25,10 @@ export default function CaseDetails({ caseDetail, updateCaseDetail }) {
       ...prevCaseInfo,
       [field]: value,
     }));
+
+    if (value == ""){
+      allowPost(false);
+    }
   };
 
 
@@ -35,7 +44,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail }) {
         </Typography>
         <EDButton
           isEditable={isEditable}
-          setIsEditable={setIsEditable}
+          setIsEditable={toggleEdit}
           onSave={handleSaveClick}
           showDelete={false}
         />

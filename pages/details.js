@@ -58,6 +58,7 @@ export default function Main() {
   const [contactError, setContactError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatable, setIsCreatable] = useState(false);
+  const [caseStatus, setCaseStatus] = useState(false);
   const [eventStatus, setEventStatus] = useState("editing");
   const taskId = router.query.taskId;
   const scrollRef = useRef();
@@ -67,7 +68,7 @@ export default function Main() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
         const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
-        caseInfo.client = ""
+        caseInfo.client = "";
         setCaseDetail(caseInfo);
         setEvents(eventInfo);
       } catch (error) {
@@ -241,8 +242,7 @@ export default function Main() {
     const icsContent = generateICSContent(
       app,
       eventDetails,
-      caseDetail.caseNum,
-      caseDetail.client
+      caseDetail
     );
     downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
   };
@@ -427,6 +427,7 @@ export default function Main() {
                 <CaseDetails
                   caseDetail={caseDetail}
                   updateCaseDetail={setCaseDetail}
+                  allowPost={setCaseStatus}
                 />
               ) : (
                 <CircularProgress />
@@ -473,7 +474,7 @@ export default function Main() {
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
           disableBtn={
-            !isCreatable || !(events && events.length > 0) || contactError
+            !isCreatable || !caseStatus || !(events && events.length > 0) || contactError
           }
           disableIndex={isAuthenticated ? -1 : 1}
         />

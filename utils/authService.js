@@ -145,7 +145,7 @@ export async function postEvents(
       var endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 1);
       const newDescription =
-        newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
+        newEvent.description + `\n\n ${caseDetail.plaintiff} \nvs\n ${caseDetail.defendant}` + "\n\n\n\n {Event created by: LegalAid}";
       const eventPayload = {
         subject: caseDetail.client + ": " + newEvent.subject,
         body: {

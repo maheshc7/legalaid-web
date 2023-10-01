@@ -55,12 +55,12 @@ export async function uploadFile(file) {
   }
 }
 
-export const generateICSContent = (app, events, calname, client) => {
+export const generateICSContent = (app, events, caseDetail) => {
   let icsContent = `BEGIN:VCALENDAR
 VERSION:2.0
 CALSCALE:GREGORIAN
 METHOD:PUBLISH
-X-WR-CALNAME:${calname}`;
+X-WR-CALNAME:${caseDetail.caseNum}`;
 
 //If user has logged in, then we can add the timezone
   if (app.user && app.user.timeZone){
@@ -74,14 +74,14 @@ X-WR-TIMEZONE:${app.user.timezone}`;
     var endDate = new Date(dateOnly);
     endDate.setDate(endDate.getDate() + 1);
     const newDescription =
-      eventDetails.description + "\n\n\n\n {Event created by: LegalAid}";
+      eventDetails.description + `\n\n ${caseDetail.plaintiff} \nvs\n ${caseDetail.defendant}` + "\n\n\n\n {Event created by: LegalAid}";
 
     icsContent += `
 BEGIN:VEVENT
 UID:${eventDetails.id}
 DTSTART:${startDate.toISOString().substring(0, 10).replaceAll("-", "")}
 DTEND:${endDate.toISOString().substring(0, 10).replaceAll("-", "")}
-SUMMARY:${client+ ": " +eventDetails.subject}
+SUMMARY:${caseDetail.client+ ": " +eventDetails.subject}
 DESCRIPTION:${newDescription}
 END:VEVENT`;
   });
