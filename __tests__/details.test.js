@@ -1,5 +1,5 @@
 import {React} from 'react';
-import { render, screen, fireEvent, act} from '@testing-library/react';
+import { render, screen, fireEvent, act, within} from '@testing-library/react';
 import '@testing-library/jest-dom'
 import Main from '../pages/details';
 import { useAppContext } from '../context/AppContext';
@@ -41,8 +41,8 @@ jest.mock('../utils/authService', () => ({
     ensureClient: jest.fn(),
     getUser: jest.fn(),
     getUserTimeZone: jest.fn(),
-    getCalendar: jest.fn(),
-    shareCalendar: jest.fn(),
+    getOrCreateCalendar: jest.fn(),
+    updateCalendar: jest.fn(),
     getContacts: jest.fn(),
     getFilteredContacts: jest.fn(),
     getAppEvents: jest.fn(),
@@ -62,10 +62,11 @@ let mockAppContext = {
 };
 
 //Mock Response
-const mockResponse = {
+let mockResponse = {
     "case": {
         "caseNum": "V1300CV202180084",
         "court": "Arizona Superior Maricopa County",
+        "client": "",
         "defendant": "Harvey Specter",
         "plaintiff": "Saul Goodman"
     },
@@ -88,16 +89,16 @@ const mockResponse = {
 // Mock the useAppContext hook's return value
 useAppContext.mockReturnValue(mockAppContext);
 useIsAuthenticated.mockReturnValue(false);
+apiHelpers.uploadFileGetEvents.mockResolvedValue([mockResponse.case, mockResponse.events]);
 
 describe('Main Component', () => {
 
     it('should render without crashing', () => {
-        apiHelpers.uploadFileGetEvents.mockReturnValue([null,null])
         render(<Main />);
     });
   
     it('should display loading indicators for case details and events', async() => {
-        // apiHelpers.uploadFileGetEvents.mockReturnValue([null,null]);
+        apiHelpers.uploadFileGetEvents.mockResolvedValueOnce([null,null]);
         await act(async () => {
             render(<Main />);
           });
@@ -108,7 +109,6 @@ describe('Main Component', () => {
     });
 
     it('should disable split button and email input field', async() => {
-        apiHelpers.uploadFileGetEvents.mockReturnValue([null,{}]);
         await act(async () => {
             render(<Main />);
           });
@@ -123,11 +123,21 @@ describe('Main Component', () => {
 
     it('should enable split button and email input field', async() => {
         useIsAuthenticated.mockReturnValue(true);
-        apiHelpers.uploadFileGetEvents.mockReturnValue([mockResponse.case, mockResponse.events]);
 
         await act(async () => {
             render(<Main />);
           });
+
+        // Toggle case edit button
+        const caseDetailContainer = screen.getByTestId('case-detail');
+        const editButton = within(caseDetailContainer).getByLabelText('edit');
+        fireEvent.click(editButton); //Edit Case Detail
+
+        // Set the client value
+        const clientInput = screen.getByLabelText('Client');
+        fireEvent.change(clientInput, { target: { value: 'Sample Client' } });
+
+        fireEvent.click(editButton); //Save Case Detail
 
         const splitBtnChildren = screen.getByLabelText("split button").childNodes;
         splitBtnChildren.forEach(btn =>
@@ -154,7 +164,6 @@ describe('Event Handling and Export', () => {
     
     it('should add events correctly', async () => {
         useIsAuthenticated.mockReturnValue(false);
-        apiHelpers.uploadFileGetEvents.mockReturnValue([mockResponse.case, mockResponse.events]);
         await act(async () => {
             render(<Main />);
         });
@@ -172,7 +181,7 @@ describe('Event Handling and Export', () => {
   
     it('should generate and trigger ICS file download', async () => {
         // useIsAuthenticated.mockReturnValue(false);
-        // apiHelpers.uploadFileGetEvents.mockReturnValue([mockResponse.case, mockResponse.events]);
+        mockResponse.case.client = "Client";
     
         // Render the component
         await act(async () => {
@@ -191,9 +200,9 @@ describe('Event Handling and Export', () => {
 
     it('should display success message after creating events', async () => {
         useIsAuthenticated.mockReturnValue(true);
-        apiHelpers.uploadFileGetEvents.mockReturnValue([mockResponse.case, mockResponse.events]);
-        const mockCalendar = { id: 'mock-calendar-id', isNew: false }
-        authService.getCalendar.mockResolvedValue(mockCalendar);
+        mockResponse.case.client = "Client";
+        const mockCalendar = { id: 'mock-calendar-id', isNew: false, isOwner: true}
+        authService.getOrCreateCalendar.mockResolvedValue(mockCalendar);
         // Render the component
         await act(async () => {
             render(<Main />);
@@ -219,7 +228,7 @@ describe('Event Handling and Export', () => {
         await act(async () => fireEvent.click(createEventBtn));
         
 
-        expect(authService.getCalendar).toHaveBeenCalled();
+        expect(authService.getOrCreateCalendar).toHaveBeenCalled();
         expect(authService.getAppEvents).toHaveBeenCalled();
         expect(authService.deleteEvents).toHaveBeenCalledWith(useAppContext.providerAuth, mockCalendar.id, [mockEventDetails.id]);
         expect(authService.postEvents).toHaveBeenCalled();
@@ -228,15 +237,40 @@ describe('Event Handling and Export', () => {
         expect(successMessage).toBeInTheDocument();
     });
 
-    /*it('should display error message if event creation fails', async () => {
-        render(<Main />);
-        // Mock failed event creation
-    
-        const errorMessage = await screen.findByText('Error creating event');
-        expect(errorMessage).toBeInTheDocument();
+    it('should display error message if event creation fails', async () => {
+        useIsAuthenticated.mockReturnValue(true);
+        mockResponse.case.client = "Client";
+        const mockCalendar = { id: 'mock-calendar-id', isNew: false, isOwner: false}
+        authService.getOrCreateCalendar.mockResolvedValue(mockCalendar);
+
+        await act(async () => {
+            render(<Main />);
+        });
+
+        // Mock Add to Outlook Btn click
+        const splitBtnArrow = screen.getByLabelText("select create event option");
+        fireEvent.click(splitBtnArrow);
+
+        const createEventOption = await screen.findByText("Add to Outlook");
+        await act(async () => fireEvent.click(createEventOption));
+
+        const createEventBtn = await screen.findByRole('button', { name: 'Add to Outlook' });
+        const mockEventDetails = {
+            id: 1,
+            subject: 'Mock Event',
+            description: 'Mock description',
+            date: new Date(),
+          };
+        
+        authService.getAppEvents.mockResolvedValue([mockEventDetails.id]);
+         // Mock failed event creation
+         authService.postEvents.mockRejectedValue(new Error('Test'));
+        await act(async () => fireEvent.click(createEventBtn));
+        
+        expect(mockAppContext.displayError).toHaveBeenCalledWith("Error creating event", "Test");
     });    
 
-    it('should redirect to the home page after successful event creation', async () => {
+    /* it('should redirect to the home page after successful event creation', async () => {
         render(<Main />);
         // Mock successful event creation
     

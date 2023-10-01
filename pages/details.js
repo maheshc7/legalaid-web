@@ -68,7 +68,12 @@ export default function Main() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
         const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
-        caseInfo.client = "";
+        if(caseInfo && caseInfo.client){
+          setCaseStatus(true);
+        }
+        else if(caseInfo){
+          caseInfo.client = "";
+        }
         setCaseDetail(caseInfo);
         setEvents(eventInfo);
       } catch (error) {
@@ -418,6 +423,7 @@ export default function Main() {
             ) : null}
 
             <Box
+              data-testid="case-detail"
               border={1}
               borderColor={"grey.400"}
               borderRadius={1.5}
