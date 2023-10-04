@@ -126,11 +126,11 @@ export async function postEvents(
   eventDetails,
   selectedContacts,
   calendarId,
-  appUniqueId
+  caseDetail
 ) {
   ensureClient(authProvider);
   try{
-    singleValueExtendedProperty.value = appUniqueId;
+    singleValueExtendedProperty.value = caseDetail.caseNum;
 
     const attendees = selectedContacts.map((contact) => ({
       emailAddress: {
@@ -145,9 +145,9 @@ export async function postEvents(
       var endDate = new Date(startDate);
       endDate.setDate(endDate.getDate() + 1);
       const newDescription =
-        newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
+        newEvent.description + `\n\n ${caseDetail.plaintiff} \nvs\n ${caseDetail.defendant}` + "\n\n\n\n {Event created by: LegalAid}";
       const eventPayload = {
-        subject: newEvent.subject,
+        subject: caseDetail.client + ": " + newEvent.subject,
         body: {
           contentType: "Text",
           content: newDescription,
@@ -179,7 +179,7 @@ export async function postEvents(
           "Content-Type": "application/json",
           // "Prefer": `IdType="ImmutableId"`,
         },
-        transactionId: appUniqueId,
+        transactionId: caseDetail.caseNum,
       };
     });
 

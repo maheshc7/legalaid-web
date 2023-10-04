@@ -6,15 +6,18 @@ import CaseDetails from '../components/CaseDetail';
 describe('CaseDetails', () => {
     
     const mockUpdateCaseDetail = jest.fn();
+    const mockAllowPost = jest.fn();
 
      const defaultProps = {
         caseDetail: {
             court: 'Sample Court',
             caseNum: 'Case123',
+            client: '',
             plaintiff: 'John Doe',
             defendant: 'Jane Doe',
             },
         updateCaseDetail: mockUpdateCaseDetail,
+        allowPost: mockAllowPost,
     };
     
     it('renders without errors', () => {
@@ -45,6 +48,11 @@ describe('CaseDetails', () => {
         render(<CaseDetails {...defaultProps} />);
         const editButton = screen.getByLabelText('edit');
         fireEvent.click(editButton);
+
+        // Set the client value
+        const clientInput = screen.getByLabelText('Client');
+        fireEvent.change(clientInput, { target: { value: 'Sample Client' } });
+
         const saveButton = screen.getByLabelText('save');
         fireEvent.click(saveButton);
         expect(mockUpdateCaseDetail).toHaveBeenCalled();
@@ -63,6 +71,14 @@ describe('CaseDetails', () => {
 
         const plaintiffnput = screen.getByLabelText('Plaintiff');
         expect(plaintiffnput).toHaveValue('John Doe');
+    });
+
+    it('displays error for empty client field', () => {
+        render(<CaseDetails {...defaultProps} />);
+        const clientInput = screen.getByLabelText('Client');
+
+        // Verify that the error styling is applied
+        expect(clientInput.parentElement).toHaveClass('Mui-error');
     });
 
     it('displays error for empty court field', () => {
@@ -118,6 +134,10 @@ describe('CaseDetails', () => {
         const courtInput = screen.getByLabelText('Court');
         fireEvent.change(courtInput, { target: { value: 'New Court' } });
         expect(courtInput).toHaveValue('New Court');
+
+        const clientInput = screen.getByLabelText('Client');
+        fireEvent.change(clientInput, { target: { value: 'New Client' } });
+        expect(clientInput).toHaveValue('New Client');
 
         const caseInput = screen.getByLabelText('Case Number');
         fireEvent.change(caseInput, { target: { value: 'New456' } });

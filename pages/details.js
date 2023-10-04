@@ -58,6 +58,7 @@ export default function Main() {
   const [contactError, setContactError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatable, setIsCreatable] = useState(false);
+  const [caseStatus, setCaseStatus] = useState(false);
   const [eventStatus, setEventStatus] = useState("editing");
   const taskId = router.query.taskId;
   const scrollRef = useRef();
@@ -67,6 +68,12 @@ export default function Main() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
         const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
+        if(caseInfo && caseInfo.client){
+          setCaseStatus(true);
+        }
+        else if(caseInfo){
+          caseInfo.client = "";
+        }
         setCaseDetail(caseInfo);
         setEvents(eventInfo);
       } catch (error) {
@@ -221,7 +228,7 @@ export default function Main() {
         eventDetails,
         selectedContacts,
         calendarId,
-        caseDetail.caseNum
+        caseDetail
       );
       // TODO: do we call postEvents again if it fails?
       //after successfully creating events.
@@ -240,7 +247,7 @@ export default function Main() {
     const icsContent = generateICSContent(
       app,
       eventDetails,
-      caseDetail.caseNum
+      caseDetail
     );
     downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
   };
@@ -416,6 +423,7 @@ export default function Main() {
             ) : null}
 
             <Box
+              data-testid="case-detail"
               border={1}
               borderColor={"grey.400"}
               borderRadius={1.5}
@@ -425,6 +433,7 @@ export default function Main() {
                 <CaseDetails
                   caseDetail={caseDetail}
                   updateCaseDetail={setCaseDetail}
+                  allowPost={setCaseStatus}
                 />
               ) : (
                 <CircularProgress />
@@ -471,7 +480,7 @@ export default function Main() {
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
           disableBtn={
-            !isCreatable || !(events && events.length > 0) || contactError
+            !isCreatable || !caseStatus || !(events && events.length > 0) || contactError
           }
           disableIndex={isAuthenticated ? -1 : 1}
         />
