@@ -35,6 +35,8 @@ import {
   postEvents,
   getAppEvents,
   deleteEvents,
+  getorCreateGroup,
+  getGroupCalendar,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
 import ErrorMessage from "../components/ErrorMessage";
@@ -111,12 +113,13 @@ export default function Main() {
 
   const handleContactChange = (event, value, reason) => {
     //event: onClick, value: latest value in the text field, reason: select, add or remove
+    console.log("Contact change:", value);
     if (reason === "createOption") {
       // If the user typed a custom value, add it to the selectedContacts state
       const newEmail = value.pop();
       setSelectedContacts([
         ...selectedContacts,
-        { name: newEmail, address: newEmail },
+        { id: "", name: newEmail, address: newEmail },
       ]);
       if (!validateEmail(newEmail)) {
         setContactError(true);
@@ -216,11 +219,7 @@ export default function Main() {
     setEventStatus("processing");
 
     try {
-      //Add user as the attendee as well to get the events in their main calendar
-      setSelectedContacts([
-        ...selectedContacts,
-        { name: app.user.displayName, address: app.user.email },
-      ]);
+     
 
       await postEvents(
         app.authProvider,
@@ -232,10 +231,12 @@ export default function Main() {
       );
       // TODO: do we call postEvents again if it fails?
       //after successfully creating events.
-      setEventStatus("success");
-      setTimeout(() => {
-        router.push("/");
-      }, 3000);
+      setIsCreatable(true);
+      setEventStatus("editing");
+      // setEventStatus("success");
+      // setTimeout(() => {
+      //   router.push("/");
+      // }, 3000);
     } catch (err) {
       setIsCreatable(true);
       setEventStatus("editing");
@@ -260,19 +261,41 @@ export default function Main() {
 
       case 1: //Add to Outlook
         try {
-          const calendar = await getOrCreateCalendar(
-            app.authProvider,
-            caseDetail.caseNum,
-            app.user.email
-          );
+
+          //Add user as the attendee as well to get the events in their main calendar
+          setSelectedContacts([
+            ...selectedContacts,
+            { id: app.user.id, name: app.user.displayName, address: app.user.email },
+          ]);
+
+          let calendar, url;
+          if(app.user){
+            const [groupId, isNew] = await getorCreateGroup(app.authProvider, caseDetail.caseNum, selectedContacts)
+            url = `/groups/${groupId}/events`
+          }
+          else if(app.user.isOrg == false){
+            calendar = await getOrCreateCalendar(
+              app.authProvider,
+              caseDetail.caseNum,
+              app.user.email
+            );
+            url = `/me/calendars/${calendar.id}/events`
+          }
+          else{
+            break;
+          }
+          
           if (!calendar.isNew) {
             //If calendar exists already, delete old events created by LegalAid (if any)
             await removeOldEvents(calendar.id);
           }
+
           if (calendar.isOwner){
             await shareCalendar(calendar.id);
           }
-          await createEvents(calendar.id);
+
+          await createEvents(groupId);
+
         } catch (err) {
           app.displayError("Error Getting Calendar", err.message);
         }

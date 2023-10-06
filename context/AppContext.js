@@ -106,14 +106,19 @@ function useProvideAppContext() {
     });
 
     // Get the user from Microsoft Graph
-    const user = await getUser(authProvider);
+    const account = await getUser(authProvider);
+    console.log("Account:", account);
 
     setUser({
-      displayName: user.displayName || "",
-      email: user.mail || user.userPrincipalName || "",
+      id: account.id,
+      displayName: account.displayName || "",
+      email: account.mail || account.userPrincipalName || "",
       //  timeFormat: user.mailboxSettings?.timeFormat || '',
-      timeZone: await getUserTimeZone(authProvider),
+      timeZone: account.timeZone,
+      isOrg: account.isOrg,
     });
+
+    console.log("User: ", user);
   };
   // </SignInSnippet>
 

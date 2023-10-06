@@ -20,15 +20,17 @@ function ensureClient(authProvider) {
 // <GetUserSnippet>
 export async function getUser(authProvider) {
   ensureClient(authProvider);
+  const workAccountPattern = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
 
   // Return the /me API endpoint result as a User object
   const user = await graphClient
     .api("/me")
     // Only retrieve the specific fields needed
-    .select("displayName,userPrincipalName")
+    .select("id,displayName,userPrincipalName,mailboxSettings")
     .get();
-  const timeZone = await getUserTimeZone(authProvider);
-  user.timeZone = timeZone;
+  // const timeZone = await getUserTimeZone(authProvider);
+  user.isOrg = workAccountPattern.test(user.id)
+  user.timeZone = user.mailboxSettings.timeZone;
   return user;
 }
 
@@ -48,9 +50,10 @@ export async function getOrCreateCalendar(authProvider, calendarName, userEmail)
   var calendar = await graphClient
     .api("/me/calendars")
     .filter(`name eq '${calendarName}'`)
-    .select("id, owner")
+    // .select("id, owner")
     .get();
 
+  console.log("Cal:", calendar)
   if (!calendar || calendar === undefined || !calendar.value.length) {
     // If calendar doesn't exist, create a new calendar
     calendar = await graphClient.api("/me/calendars").post({
@@ -81,6 +84,94 @@ export async function updateCalendar(calendarId, calendarPermission) {
 }
 // </CalendarSnippet>
 
+// <GroupSnippet>
+export async function getorCreateGroup(authProvider, groupName, contactList) {
+  ensureClient(authProvider);
+  // Get the group if it exists
+  var isNew = true;
+  var group = await graphClient
+    .api("/groups")
+    .filter(`displayName eq '${groupName}'`)
+    //.select("id")
+    .get();
+
+  var groupId = group.value
+  console.log("Get group:", group, groupId);
+
+  const apiUrl = 'https://graph.microsoft.com/v1.0/users/';
+
+  const memberList = contactList.map(contact => `${apiUrl}${contact.id}`);
+  
+  console.log(memberList);
+
+  if (!groupId.length) {
+    // If group doesn't exist, create a new group
+    console.log("Create new group");
+    isNew = true;
+    const groupBody = {
+      description: `LegalAid Group for CASE: ${groupName}`,
+      displayName: groupName,
+      groupTypes: [
+        'Unified'
+      ],
+      mailEnabled: true,
+      mailNickname: `${groupName}`,
+      securityEnabled: false,
+      visibility: "Public",
+      'owners@odata.bind': [
+        `https://graph.microsoft.com/v1.0/users/${userId}`
+      ],
+      'members@odata.bind': memberList
+    };
+    
+    group = await graphClient.api('/groups')
+      .post(groupBody);
+    
+    console.log("New group: ", group);    
+    groupId = group.id;
+
+  }
+  else{
+    groupId = groupId[0].id;
+    console.log("Add members", groupId );
+    //Update member list
+    // TODO: Check existing members
+    // const groupUpdate = {
+    //   'members@odata.bind': memberList
+    // }
+
+    // await graphClient.api(`/groups/${groupId}`)
+    //   .update(groupUpdate);
+  }
+  console.log(groupId, isNew);
+  return [groupId, isNew];
+}
+
+// export async function getGroupCalendar(authProvider, groupId, isNew){
+//   ensureClient(authProvider);
+
+//   var calendar = await graphClient.api(`/groups/${groupId}/calendar`)
+//     // .select("id")
+//     .get()
+
+//   console.log("Cal: ", calendar);
+
+//   // console.log("Group Cal: ",calendar)
+
+//   return { id:calendar.id, isNew: isNew, isOwner: false };
+// }
+
+// export async function updateGroupMembers(authProvider, calendarId){
+//   ensureClient(authProvider);
+
+//   var calendar = await graphClient.api(`/groups/${groupid}/calendar`)
+//     .select("id")
+//     .get()
+
+//   return { id: calendar.value[0].id, isNew: false, isOwner: calendar.value[0].owner.address == userEmail };
+// }
+// </GroupSnippet>
+
 // <GetContactsSnippet>
 export async function getContacts(authProvider) {
   ensureClient(authProvider);
@@ -104,12 +195,13 @@ export async function getFilteredContacts(authProvider, query) {
 
   var response = await graphClient
     .api("/me/people")
-    .select("displayName,scoredEmailAddresses")
+    .select("id,displayName,scoredEmailAddresses")
     .search(query)
     .get();
 
   const filteredContacts = response.value.map(
-    ({ displayName, scoredEmailAddresses: [{ address }] }) => ({
+    ({ id, displayName, scoredEmailAddresses: [{ address }] }) => ({
+      id: id,
       name: displayName,
       address: address,
     })
@@ -173,7 +265,7 @@ export async function postEvents(
         // Unique identifier for the request
         id: newEvent.id,
         method: "POST",
-        url: `/me/calendars/${calendarId}/events`,
+        url: `/groups/${calendarId}/calendar/events`,//`/me/calendars/${calendarId}/events`,
         body: eventPayload,
         headers: {
           "Content-Type": "application/json",
@@ -184,6 +276,7 @@ export async function postEvents(
     });
 
     const response = await batchRequests(requests);
+    console.log(response)
     return response;
   }catch(err){
     console.error("Error creating events in Outlook Calendar ",err)
