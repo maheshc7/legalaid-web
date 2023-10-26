@@ -35,8 +35,10 @@ import {
   postEvents,
   getAppEvents,
   deleteEvents,
-  getorCreateGroup,
-  getGroupCalendar,
+  getGroup,
+  addGroupMembers,
+  postGroup,
+  getGroupMembers,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
 import ErrorMessage from "../components/ErrorMessage";
@@ -105,6 +107,31 @@ export default function Main() {
     }
   }, [searchQuery]);
 
+  useEffect(() =>{
+    async function updateContactList(){
+      let groupId = await getGroup(app.authProvider, caseDetail.caseNum);
+  
+      if(groupId){
+        const memberList = await getGroupMembers(app.authProvider, groupId);
+        console.log(memberList);
+        setSelectedContacts((prevContacts) => [
+          ...prevContacts,
+          ...memberList.filter((member) => 
+            !prevContacts.some((contact) => contact.address === member.address)
+          ),
+        ]);
+      }
+    }
+    if (caseDetail){
+      updateContactList();
+    }
+
+  }, [caseDetail?.caseNum]);
+
+  async function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
   const validateEmail = (email) => {
     // Regular expression for email validation
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -113,7 +140,6 @@ export default function Main() {
 
   const handleContactChange = (event, value, reason) => {
     //event: onClick, value: latest value in the text field, reason: select, add or remove
-    console.log("Contact change:", value);
     if (reason === "createOption") {
       // If the user typed a custom value, add it to the selectedContacts state
       const newEmail = value.pop();
@@ -214,18 +240,16 @@ export default function Main() {
     }
   }
 
-  async function createEvents(calendarId) {
+  async function createEvents(calendarId, attendeeList) {
     setIsCreatable(false);
     setEventStatus("processing");
 
     try {
-     
-
       await postEvents(
         app.authProvider,
         app.user.timeZone,
         eventDetails,
-        selectedContacts,
+        attendeeList,
         calendarId,
         caseDetail
       );
@@ -261,17 +285,29 @@ export default function Main() {
 
       case 1: //Add to Outlook
         try {
-
+          console.log(app.user);
+          let calendar = {}, url;
           //Add user as the attendee as well to get the events in their main calendar
-          setSelectedContacts([
-            ...selectedContacts,
-            { id: app.user.id, name: app.user.displayName, address: app.user.email },
-          ]);
+          let attendeeList = selectedContacts;
+          let userContact = { id: app.user.id, name: app.user.displayName, address: app.user.email };
+          attendeeList.push(userContact);
 
-          let calendar, url;
-          if(app.user){
-            const [groupId, isNew] = await getorCreateGroup(app.authProvider, caseDetail.caseNum, selectedContacts)
-            url = `/groups/${groupId}/events`
+          if(app.user.isOrg){
+            let groupId = await getGroup(app.authProvider, caseDetail.caseNum);
+
+            calendar.isOwner = false;
+            calendar.isNew = false;
+
+            if(groupId){
+              addGroupMembers(app.authProvider,groupId, attendeeList);
+            }
+            else{
+              groupId = await postGroup(app.authProvider, caseDetail.caseNum, attendeeList);
+              calendar.isNew = true;
+              await delay(2000);
+            }
+
+            url = `/groups/${groupId}`;
           }
           else if(app.user.isOrg == false){
             calendar = await getOrCreateCalendar(
@@ -279,22 +315,23 @@ export default function Main() {
               caseDetail.caseNum,
               app.user.email
             );
-            url = `/me/calendars/${calendar.id}/events`
+            url = `/me/calendars/${calendar.id}`
           }
           else{
+            console.error("isOrg variable is not definied", app.user.isOrg);
             break;
           }
           
           if (!calendar.isNew) {
             //If calendar exists already, delete old events created by LegalAid (if any)
-            await removeOldEvents(calendar.id);
+            await removeOldEvents(url);
           }
 
           if (calendar.isOwner){
             await shareCalendar(calendar.id);
           }
 
-          await createEvents(groupId);
+          await createEvents(url, attendeeList);
 
         } catch (err) {
           app.displayError("Error Getting Calendar", err.message);

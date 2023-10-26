@@ -85,91 +85,104 @@ export async function updateCalendar(calendarId, calendarPermission) {
 // </CalendarSnippet>
 
 // <GroupSnippet>
-export async function getorCreateGroup(authProvider, groupName, contactList) {
+export async function postGroup(authProvider, groupName, contactList){
+
+  const apiUrl = 'https://graph.microsoft.com/v1.0/users/';
+  var memberList = contactList.map(contact => `${apiUrl}${contact.id}`);
+  
+  var ownerId = await getFilteredContacts(authProvider, "legalaidbot");
+  //If we have the legalaid_bot account then use that else make the user as owner. User would be the last contact added in the contactList => memberList
+  ownerId = ownerId.length > 0? apiUrl+ownerId[0].id : memberList.pop();
+
+  const groupBody = {
+    description: `LegalAid Group for Case: ${groupName}`,
+    displayName: groupName,
+    groupTypes: [
+      'Unified'
+    ],
+    mailEnabled: true,
+    mailNickname: `${groupName}`,
+    securityEnabled: false,
+    visibility: "Public",
+    'owners@odata.bind': [ownerId],
+    'members@odata.bind': memberList
+  };
+  
+  const group = await graphClient.api('/groups')
+    .post(groupBody);
+
+  return group.id;
+}
+
+export async function getGroup(authProvider, groupName) {
   ensureClient(authProvider);
-  // Get the group if it exists
-  var isNew = true;
+
+  // Check if group if it exists
   var group = await graphClient
     .api("/groups")
     .filter(`displayName eq '${groupName}'`)
-    //.select("id")
+    .select("id")
     .get();
 
-  var groupId = group.value
-  console.log("Get group:", group, groupId);
+  var groupId = group.value;
 
-  const apiUrl = 'https://graph.microsoft.com/v1.0/users/';
-
-  const memberList = contactList.map(contact => `${apiUrl}${contact.id}`);
-  
-  console.log(memberList);
-
-  if (!groupId.length) {
-    // If group doesn't exist, create a new group
-    console.log("Create new group");
-    isNew = true;
-    const groupBody = {
-      description: `LegalAid Group for CASE: ${groupName}`,
-      displayName: groupName,
-      groupTypes: [
-        'Unified'
-      ],
-      mailEnabled: true,
-      mailNickname: `${groupName}`,
-      securityEnabled: false,
-      visibility: "Public",
-      'owners@odata.bind': [
-        `https://graph.microsoft.com/v1.0/users/${userId}`
-      ],
-      'members@odata.bind': memberList
-    };
-    
-    group = await graphClient.api('/groups')
-      .post(groupBody);
-    
-    console.log("New group: ", group);    
-    groupId = group.id;
-
-  }
-  else{
+  if (groupId.length) {
     groupId = groupId[0].id;
-    console.log("Add members", groupId );
-    //Update member list
-    // TODO: Check existing members
-    // const groupUpdate = {
-    //   'members@odata.bind': memberList
-    // }
-
-    // await graphClient.api(`/groups/${groupId}`)
-    //   .update(groupUpdate);
+    return groupId;
   }
-  console.log(groupId, isNew);
-  return [groupId, isNew];
+
+  //group doesn't exist.
+  return null;
 }
 
-// export async function getGroupCalendar(authProvider, groupId, isNew){
-//   ensureClient(authProvider);
+export async function getGroupMembers(authProvider, groupId){
+  ensureClient(authProvider);
 
-//   var calendar = await graphClient.api(`/groups/${groupId}/calendar`)
-//     // .select("id")
-//     .get()
+  const response = await graphClient
+  .api(`/groups/${groupId}/members`) //microsoft.graph.user
+  // .header('ConsistencyLevel','eventual')
+  .select("id,displayName,mail")
+  .get();
 
-//   console.log("Cal: ", calendar);
+  const existingMembers = response.value.map(
+    ({ id, displayName, mail}) => ({
+      id: id,
+      name: displayName,
+      address: mail,
+    })
+  );
 
-//   // console.log("Group Cal: ",calendar)
+  console.log("Existing Members: ", existingMembers);
+  return existingMembers;
 
-//   return { id:calendar.id, isNew: isNew, isOwner: false };
-// }
+}
 
-// export async function updateGroupMembers(authProvider, calendarId){
-//   ensureClient(authProvider);
+export async function addGroupMembers(authProvider, groupId, contactList){
+  ensureClient(authProvider);
 
-//   var calendar = await graphClient.api(`/groups/${groupid}/calendar`)
-//     .select("id")
-//     .get()
+  const existingMembers = await getGroupMembers(authProvider, groupId);
+  
+  const newMembers = contactList.filter(contact =>
+    !existingMembers.some(existingMember =>
+      existingMember.id === contact.id && existingMember.address === contact.address
+    )
+  );
+  console.log("New Members: ", newMembers);
 
-//   return { id: calendar.value[0].id, isNew: false, isOwner: calendar.value[0].owner.address == userEmail };
-// }
+  
+  if(newMembers.length){
+    //Update member list
+    const apiUrl = 'https://graph.microsoft.com/v1.0/users/';
+    const memberList = newMembers.map(contact => `${apiUrl}${contact.id}`);
+    const groupUpdate = {
+      'members@odata.bind': memberList
+    }
+
+    graphClient.api(`/groups/${groupId}`)
+      .update(groupUpdate);
+  }
+}
+
 // </GroupSnippet>
 
 // <GetContactsSnippet>
@@ -217,7 +230,7 @@ export async function postEvents(
   timeZone,
   eventDetails,
   selectedContacts,
-  calendarId,
+  url,
   caseDetail
 ) {
   ensureClient(authProvider);
@@ -265,7 +278,7 @@ export async function postEvents(
         // Unique identifier for the request
         id: newEvent.id,
         method: "POST",
-        url: `/groups/${calendarId}/calendar/events`,//`/me/calendars/${calendarId}/events`,
+        url: `${url}/events`,
         body: eventPayload,
         headers: {
           "Content-Type": "application/json",
@@ -310,7 +323,7 @@ export async function updateEvents(authProvider, calendarId, eventIds) {
 
 export async function getAppEvents(
   authProvider,
-  calendarId,
+  url,
   appUniqueId
 ) {
   ensureClient(authProvider);
@@ -320,7 +333,7 @@ export async function getAppEvents(
   let allEvents = [];
   let nextPageLink = null;
   let query = graphClient
-    .api(`/me/calendars/${calendarId}/events`)
+    .api(`${url}/events`)
     .select("id, subject, bodyPreview")
     // .filter(
     //   `singleValueExtendedProperties/any(ep:ep/id eq '${singleValueExtendedProperty.id}' AND contains(ep/value, '${singleValueExtendedProperty.value}'))`
@@ -344,14 +357,14 @@ export async function getAppEvents(
   return filteredEventIds;
 }
 
-export async function deleteEvents(authProvider, calendarId, eventIds) {
+export async function deleteEvents(authProvider, url, eventIds) {
   ensureClient(authProvider);
 
   const requests = eventIds.map((eventId) => {
     return {
       id: eventId,
       method: "DELETE",
-      url: `/me/calendars/${calendarId}/events/${eventId}`,
+      url: `${url}/events/${eventId}`,
     };
   });
 

@@ -83,10 +83,12 @@ function useProvideAppContext() {
             const user = await getUser(authProvider);
 
             setUser({
+              id: user.id,
               displayName: user.displayName || "",
               email: user.mail || user.userPrincipalName || "",
               //  timeFormat: user.mailboxSettings?.timeFormat || 'h:mm a',
-              timeZone: await getUserTimeZone(authProvider),
+              timeZone: user.timeZone,
+              isOrg: user.isOrg
             });
           }
         } catch (err) {
