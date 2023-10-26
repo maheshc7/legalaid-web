@@ -88,7 +88,7 @@ function useProvideAppContext() {
               email: user.mail || user.userPrincipalName || "",
               //  timeFormat: user.mailboxSettings?.timeFormat || 'h:mm a',
               timeZone: user.timeZone,
-              isOrg: user.isOrg
+              isOrg: user.isOrg,
             });
           }
         } catch (err) {
