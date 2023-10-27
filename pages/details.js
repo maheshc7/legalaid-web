@@ -124,7 +124,7 @@ export default function Main() {
         ]);
       }
     }
-    if (caseDetail && app.user.isOrg) {
+    if (caseDetail && app.user?.isOrg) {
       updateContactList();
     }
   }, [caseDetail?.caseNum]);
