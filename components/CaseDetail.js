@@ -4,17 +4,27 @@ import TextField from "@mui/material/TextField";
 import EDButton from "./EditDeleteButtonControl";
 import { Typography } from "@mui/material";
 
-export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost }) {
+export default function CaseDetails({
+  caseDetail,
+  updateCaseDetail,
+  allowPost,
+}) {
   const [isEditable, setIsEditable] = useState(false);
   const [caseInfo, setCaseInfo] = useState(caseDetail);
 
   const toggleEdit = (value) => {
     setIsEditable(value);
     allowPost(!value);
-  }
+  };
 
   const handleSaveClick = () => {
-    if (caseInfo.court && caseInfo.caseNum && caseInfo.client && caseInfo.plaintiff && caseInfo.defendant) {
+    if (
+      caseInfo.court &&
+      caseInfo.caseNum &&
+      caseInfo.client &&
+      caseInfo.plaintiff &&
+      caseInfo.defendant
+    ) {
       updateCaseDetail(caseInfo);
       toggleEdit(false);
     }
@@ -26,11 +36,10 @@ export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost })
       [field]: value,
     }));
 
-    if (value == ""){
+    if (value == "") {
       allowPost(false);
     }
   };
-
 
   return (
     <>
@@ -59,7 +68,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost })
         size="small"
         margin="normal"
         value={caseInfo.court}
-        onChange={(e) => updateField("court", e.target.value)}//{(e) => setCourt(e.target.value)}
+        onChange={(e) => updateField("court", e.target.value)} //{(e) => setCourt(e.target.value)}
         disabled={!isEditable}
       />
       <TextField
@@ -68,7 +77,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost })
         size="small"
         margin="normal"
         value={caseInfo.caseNum}
-        onChange={(e) => updateField("caseNum", e.target.value)}//{(e) => setCaseNum(e.target.value)}
+        onChange={(e) => updateField("caseNum", e.target.value)} //{(e) => setCaseNum(e.target.value)}
         disabled={!isEditable}
       />
       <TextField
@@ -80,7 +89,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost })
         size="small"
         margin="normal"
         value={caseInfo.client}
-        onChange={(e) => updateField("client", e.target.value)}//{(e) => setCaseNum(e.target.value)}
+        onChange={(e) => updateField("client", e.target.value)} //{(e) => setCaseNum(e.target.value)}
         disabled={!isEditable}
       />
       <TextField
@@ -92,7 +101,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost })
         size="small"
         margin="normal"
         value={caseInfo.plaintiff}
-        onChange={(e) => updateField("plaintiff", e.target.value)}//{(e) => setPlaintiff(e.target.value)}
+        onChange={(e) => updateField("plaintiff", e.target.value)} //{(e) => setPlaintiff(e.target.value)}
         disabled={!isEditable}
       />
       <TextField
@@ -104,7 +113,7 @@ export default function CaseDetails({ caseDetail, updateCaseDetail, allowPost })
         size="small"
         margin="normal"
         value={caseInfo.defendant}
-        onChange={(e) => updateField("defendant", e.target.value)}//{(e) => setDefendant(e.target.value)}
+        onChange={(e) => updateField("defendant", e.target.value)} //{(e) => setDefendant(e.target.value)}
         disabled={!isEditable}
       />
     </>

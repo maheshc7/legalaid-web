@@ -35,6 +35,10 @@ import {
   postEvents,
   getAppEvents,
   deleteEvents,
+  getGroup,
+  addGroupMembers,
+  postGroup,
+  getGroupMembers,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
 import ErrorMessage from "../components/ErrorMessage";
@@ -68,10 +72,9 @@ export default function Main() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
         const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
-        if(caseInfo && caseInfo.client){
+        if (caseInfo && caseInfo.client) {
           setCaseStatus(true);
-        }
-        else if(caseInfo){
+        } else if (caseInfo) {
           caseInfo.client = "";
         }
         setCaseDetail(caseInfo);
@@ -103,6 +106,33 @@ export default function Main() {
     }
   }, [searchQuery]);
 
+  useEffect(() => {
+    async function updateContactList() {
+      let groupId = await getGroup(app.authProvider, caseDetail.caseNum);
+
+      if (groupId) {
+        const memberList = await getGroupMembers(app.authProvider, groupId);
+        console.log(memberList);
+        setSelectedContacts((prevContacts) => [
+          ...prevContacts,
+          ...memberList.filter(
+            (member) =>
+              !prevContacts.some(
+                (contact) => contact.address === member.address
+              )
+          ),
+        ]);
+      }
+    }
+    if (caseDetail && app.user?.isOrg) {
+      updateContactList();
+    }
+  }, [caseDetail?.caseNum]);
+
+  async function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   const validateEmail = (email) => {
     // Regular expression for email validation
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -116,7 +146,7 @@ export default function Main() {
       const newEmail = value.pop();
       setSelectedContacts([
         ...selectedContacts,
-        { name: newEmail, address: newEmail },
+        { id: "", name: newEmail, address: newEmail },
       ]);
       if (!validateEmail(newEmail)) {
         setContactError(true);
@@ -191,7 +221,7 @@ export default function Main() {
   }
 
   async function shareCalendar(calendarId) {
-    try{
+    try {
       if (selectedContacts.length) {
         const calendarPermission = selectedContacts.map((contact) => ({
           emailAddress: {
@@ -206,27 +236,21 @@ export default function Main() {
           calendarPermission
         );
       }
-    }catch(error){
+    } catch (error) {
       app.displayError("Error sharing calendar ", error.message);
     }
   }
 
-  async function createEvents(calendarId) {
+  async function createEvents(calendarId, attendeeList) {
     setIsCreatable(false);
     setEventStatus("processing");
 
     try {
-      //Add user as the attendee as well to get the events in their main calendar
-      setSelectedContacts([
-        ...selectedContacts,
-        { name: app.user.displayName, address: app.user.email },
-      ]);
-
       await postEvents(
         app.authProvider,
         app.user.timeZone,
         eventDetails,
-        selectedContacts,
+        attendeeList,
         calendarId,
         caseDetail
       );
@@ -244,11 +268,7 @@ export default function Main() {
   }
 
   const handleExportICS = () => {
-    const icsContent = generateICSContent(
-      app,
-      eventDetails,
-      caseDetail
-    );
+    const icsContent = generateICSContent(app, eventDetails, caseDetail);
     downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
   };
 
@@ -260,19 +280,59 @@ export default function Main() {
 
       case 1: //Add to Outlook
         try {
-          const calendar = await getOrCreateCalendar(
-            app.authProvider,
-            caseDetail.caseNum,
-            app.user.email
-          );
+          console.log(app.user);
+          let calendar = {},
+            url;
+          //Add user as the attendee as well to get the events in their main calendar
+          let attendeeList = selectedContacts;
+          let userContact = {
+            id: app.user.id,
+            name: app.user.displayName,
+            address: app.user.email,
+          };
+          attendeeList.push(userContact);
+
+          if (app.user.isOrg) {
+            let groupId = await getGroup(app.authProvider, caseDetail.caseNum);
+
+            calendar.isOwner = false;
+            calendar.isNew = false;
+
+            if (groupId) {
+              addGroupMembers(app.authProvider, groupId, attendeeList);
+            } else {
+              groupId = await postGroup(
+                app.authProvider,
+                caseDetail.caseNum,
+                attendeeList
+              );
+              calendar.isNew = true;
+              await delay(2000);
+            }
+
+            url = `/groups/${groupId}`;
+          } else if (app.user.isOrg == false) {
+            calendar = await getOrCreateCalendar(
+              app.authProvider,
+              caseDetail.caseNum,
+              app.user.email
+            );
+            url = `/me/calendars/${calendar.id}`;
+          } else {
+            console.error("isOrg variable is not definied", app.user.isOrg);
+            break;
+          }
+
           if (!calendar.isNew) {
             //If calendar exists already, delete old events created by LegalAid (if any)
-            await removeOldEvents(calendar.id);
+            await removeOldEvents(url);
           }
-          if (calendar.isOwner){
+
+          if (calendar.isOwner) {
             await shareCalendar(calendar.id);
           }
-          await createEvents(calendar.id);
+
+          await createEvents(url, attendeeList);
         } catch (err) {
           app.displayError("Error Getting Calendar", err.message);
         }
@@ -480,7 +540,10 @@ export default function Main() {
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
           disableBtn={
-            !isCreatable || !caseStatus || !(events && events.length > 0) || contactError
+            !isCreatable ||
+            !caseStatus ||
+            !(events && events.length > 0) ||
+            contactError
           }
           disableIndex={isAuthenticated ? -1 : 1}
         />
