@@ -124,7 +124,7 @@ export default function Main() {
         ]);
       }
     }
-    if (caseDetail) {
+    if (caseDetail && app.user.isOrg) {
       updateContactList();
     }
   }, [caseDetail?.caseNum]);
@@ -256,12 +256,10 @@ export default function Main() {
       );
       // TODO: do we call postEvents again if it fails?
       //after successfully creating events.
-      setIsCreatable(true);
-      setEventStatus("editing");
-      // setEventStatus("success");
-      // setTimeout(() => {
-      //   router.push("/");
-      // }, 3000);
+      setEventStatus("success");
+      setTimeout(() => {
+        router.push("/");
+      }, 3000);
     } catch (err) {
       setIsCreatable(true);
       setEventStatus("editing");

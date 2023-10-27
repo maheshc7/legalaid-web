@@ -57,7 +57,7 @@ let mockAppContext = {
     selectedFile: null,
     storeFile: jest.fn(),
     displayError: jest.fn(),
-    user: {timeZone: "Pacific Standard Time"},
+    user: {id: "id", isOrg: false, timeZone: "Pacific Standard Time"},
     providerAuth: "auth"
 };
 
@@ -230,7 +230,7 @@ describe('Event Handling and Export', () => {
 
         expect(authService.getOrCreateCalendar).toHaveBeenCalled();
         expect(authService.getAppEvents).toHaveBeenCalled();
-        expect(authService.deleteEvents).toHaveBeenCalledWith(useAppContext.providerAuth, mockCalendar.id, [mockEventDetails.id]);
+        expect(authService.deleteEvents).toHaveBeenCalledWith(useAppContext.providerAuth, `/me/calendars/${mockCalendar.id}`, [mockEventDetails.id]);
         expect(authService.postEvents).toHaveBeenCalled();
 
         const successMessage = await screen.findByText('Process Complete!');
