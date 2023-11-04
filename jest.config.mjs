@@ -10,10 +10,7 @@ const createJestConfig = nextJest({
 const config = {
   // Add more setup options before each test is run
   // setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  coveragePathIgnorePatterns: [
-    "/Users/mahesh/Documents/Research/legalaid_web/node_modules",
-    "/Users/mahesh/Documents/Research/legalaid_web/utils/authService.js",
-  ],
+  coveragePathIgnorePatterns: ["../node_modules", "../utils/authService.js"],
   testEnvironment: "jest-environment-jsdom",
 };
 
