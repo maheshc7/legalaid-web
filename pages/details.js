@@ -112,7 +112,6 @@ export default function Main() {
 
       if (groupId) {
         const memberList = await getGroupMembers(app.authProvider, groupId);
-        console.log(memberList);
         setSelectedContacts((prevContacts) => [
           ...prevContacts,
           ...memberList.filter(
@@ -504,7 +503,7 @@ export default function Main() {
 
         <Grid sm={12} md={6} lg={3}>
           <Box
-            id="event_box"
+            data-testid="event_box"
             component="div"
             sx={{ height: "600px", overflow: "auto" }}
           >
