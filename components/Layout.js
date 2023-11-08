@@ -104,7 +104,7 @@ export default function Layout({ children, home }) {
                 </Menu>
               </Box>
             </>
-          ) : home? null: (
+          ) : home ? null : (
             <Tooltip title="Grant acess to your Calendar and Contacts">
               <Button
                 variant="text"
@@ -113,7 +113,9 @@ export default function Layout({ children, home }) {
                 onClick={app.signIn}
                 startIcon={ms_logo}
               >
-                <Typography variant="button" sx={{fontWeight: 'bold'}}>Connect Outlook</Typography>
+                <Typography variant="button" sx={{ fontWeight: "bold" }}>
+                  Connect Outlook
+                </Typography>
               </Button>
             </Tooltip>
           )}

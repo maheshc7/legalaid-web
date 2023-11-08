@@ -7,7 +7,7 @@ import { useAppContext } from "../context/AppContext";
 
 // <ErrorMessageSnippet>
 
-export default function ErrorMessage({home}) {
+export default function ErrorMessage({ home }) {
   const app = useAppContext();
 
   useEffect(() => {
