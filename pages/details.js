@@ -41,6 +41,8 @@ import {
   getGroupMembers,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import UndoIcon from "@mui/icons-material/Undo";
 import ErrorMessage from "../components/ErrorMessage";
 import { CheckCircle } from "@mui/icons-material";
 import logo from "../public/logo.png";
@@ -54,9 +56,10 @@ export default function Main() {
   const app = useAppContext();
   const selectedFile = app.selectedFile;
   const isAuthenticated = useIsAuthenticated();
-  const [events, setEvents] = useState([]);
   const [eventDetails, setEventDetails] = useState([]);
   const [caseDetail, setCaseDetail] = useState(null);
+  const [doEnhance, setDoEnhance] = useState(true);
+  const [prevEvents, setPrevEvents] = useState([]);
   const [contactList, setContactList] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]);
   const [contactError, setContactError] = useState(false);
@@ -78,7 +81,7 @@ export default function Main() {
           caseInfo.client = "";
         }
         setCaseDetail(caseInfo);
-        setEvents(eventInfo);
+        setEventDetails(eventInfo);
       } catch (error) {
         console.error("Error fetching case and event details", error);
         app.displayError("Error fetching data", error.message);
@@ -176,12 +179,16 @@ export default function Main() {
 
   useEffect(() => {
     // Check if all EventDetail components are saved/disabled.
-    const isAnyEventEditable = eventDetails.some((event) => event.isEditable);
-    setIsCreatable(!isAnyEventEditable);
+    if (eventDetails) {
+      const isAnyEventEditable = eventDetails.some((event) => event.isEditable);
+      setIsCreatable(!isAnyEventEditable);
+    }
   }, [eventDetails]);
 
   const handleEventDelete = (id) => {
-    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id));
+    setEventDetails((prevEvents) =>
+      prevEvents.filter((event) => event.id !== id)
+    );
 
     setEventDetails((prevEvents) =>
       prevEvents.filter((event) => event.id !== id)
@@ -191,13 +198,13 @@ export default function Main() {
   const handleEventAdd = (event) => {
     event.preventDefault();
     const newEvent = {
-      id: events.length + 1,
+      id: eventDetails.length + 1,
       subject: "",
       description: "",
       date: new Date(),
     };
 
-    setEvents([...events, newEvent]);
+    setEventDetails([...eventDetails, newEvent]);
     setIsCreatable(false);
 
     // Scroll to the new component
@@ -205,6 +212,18 @@ export default function Main() {
       scrollRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
     }, 200);
   };
+
+  async function handleEnhanceOutput() {
+    console.log("Enhance:", doEnhance);
+    if (doEnhance) {
+      setPrevEvents(eventDetails);
+      const [_, eventInfo] = await uploadFileGetEvents(selectedFile, true);
+      setEventDetails(eventInfo);
+    } else {
+      setEventDetails(prevEvents);
+    }
+    setDoEnhance(!doEnhance);
+  }
 
   async function removeOldEvents(calendarId) {
     try {
@@ -507,8 +526,8 @@ export default function Main() {
             component="div"
             sx={{ height: "600px", overflow: "auto" }}
           >
-            {events && events.length > 0 ? (
-              events.map((entry, index) => (
+            {eventDetails && eventDetails.length > 0 ? (
+              eventDetails.map((entry, index) => (
                 <EventDetail
                   key={entry.id}
                   entry={entry}
@@ -520,9 +539,24 @@ export default function Main() {
               <CircularProgress />
             )}
           </Box>
-          <Grid marginTop={2} textAlign={"end"}>
+          <Grid
+            container
+            marginTop={2}
+            justifyContent={!isAuthenticated ? "space-between" : "flex-end"}
+          >
+            {!isAuthenticated && (
+              <Tooltip title={doEnhance ? "Enahnce with AI" : "Undo enhance"}>
+                <Fab
+                  size="medium"
+                  color="secondary"
+                  onClick={handleEnhanceOutput}
+                >
+                  {doEnhance ? <AutoFixHighIcon /> : <UndoIcon />}
+                </Fab>
+              </Tooltip>
+            )}
             <Tooltip title="Add Event">
-              <Fab size="medium" color="secondary" onClick={handleEventAdd}>
+              <Fab size="medium" color="primary" onClick={handleEventAdd}>
                 <AddIcon />
               </Fab>
             </Tooltip>
@@ -541,7 +575,7 @@ export default function Main() {
           disableBtn={
             !isCreatable ||
             !caseStatus ||
-            !(events && events.length > 0) ||
+            !(eventDetails && eventDetails.length > 0) ||
             contactError
           }
           disableIndex={isAuthenticated ? -1 : 1}
