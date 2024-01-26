@@ -6,16 +6,11 @@ const BASE_URL = config.backend_url;
 // Function to upload a file
 export async function uploadFileGetEvents(file, doEnhance = false) {
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("data", JSON.stringify({ is_authorized: doEnhance }));
-
-    const response = await axios.post(`${BASE_URL}/upload`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
+    const response = await axios.get(
+      `${BASE_URL}/order-details?filename=${file.name}`,
+      { headers: { "Is-Authorized": doEnhance } }
+    );
+    console.log("EVENTS: ", response);
     if (response.status === 200) {
       return [response.data.case, response.data.events];
     } else {
@@ -31,15 +26,15 @@ export async function uploadFileGetEvents(file, doEnhance = false) {
 // Function to upload a file
 export async function uploadFile(file) {
   try {
-    const fileBuffer = await file.arrayBuffer();
-    const response = await axios.post(`${BASE_URL}/upload`, fileBuffer, {
+    const response = await axios.put(`${BASE_URL}/order/${file.name}`, file, {
       headers: {
         "Content-Type": "application/pdf",
       },
     });
 
-    if (response.status === 201) {
-      print(response);
+    console.log("UPLOAD:", response);
+    if (response.status === 200) {
+      console.log(response);
       return response;
     } else {
       throw new Error("Failed to upload file");
