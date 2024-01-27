@@ -4,13 +4,13 @@ import config from "../Config";
 const BASE_URL = config.backend_url;
 
 // Function to upload a file
-export async function uploadFileGetEvents(file, doEnhance = false) {
+export async function uploadFileGetEvents(filename, doEnhance = false) {
   try {
     const response = await axios.get(
-      `${BASE_URL}/order-details?filename=${file.name}`,
-      { headers: { "Is-Authorized": doEnhance } }
+      `${BASE_URL}/order-details?filename=${filename}`,
+      { headers: { "Is-Authorized": String(doEnhance) } }
     );
-    console.log("EVENTS: ", response);
+
     if (response.status === 200) {
       return [response.data.case, response.data.events];
     } else {
@@ -32,10 +32,8 @@ export async function uploadFile(file) {
       },
     });
 
-    console.log("UPLOAD:", response);
     if (response.status === 200) {
-      console.log(response);
-      return response;
+      return file.name;
     } else {
       throw new Error("Failed to upload file");
     }

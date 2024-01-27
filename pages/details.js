@@ -49,6 +49,7 @@ import logo from "../public/logo.png";
 import Image from "next/image";
 import SplitButton from "../components/SplitButton";
 import { useIsAuthenticated } from "@azure/msal-react";
+import config from "../Config";
 
 const splitBtnOptions = ["Download Events", "Add to Outlook"];
 export default function Main() {
@@ -56,6 +57,7 @@ export default function Main() {
   const app = useAppContext();
   const selectedFile = app.selectedFile;
   const isAuthenticated = useIsAuthenticated();
+  const [pdfUrl, setPdfUrl] = useState("");
   const [eventDetails, setEventDetails] = useState([]);
   const [caseDetail, setCaseDetail] = useState(null);
   const [doEnhance, setDoEnhance] = useState(true);
@@ -67,14 +69,14 @@ export default function Main() {
   const [isCreatable, setIsCreatable] = useState(false);
   const [caseStatus, setCaseStatus] = useState(false);
   const [eventStatus, setEventStatus] = useState("editing");
-  const taskId = router.query.taskId;
+  const filename = router.query.filename;
   const scrollRef = useRef();
 
   useEffect(() => {
     async function fetchData() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
-        const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
+        const [caseInfo, eventInfo] = await uploadFileGetEvents(filename);
         if (caseInfo && caseInfo.client) {
           setCaseStatus(true);
         } else if (caseInfo) {
@@ -82,13 +84,14 @@ export default function Main() {
         }
         setCaseDetail(caseInfo);
         setEventDetails(eventInfo);
+        setPdfUrl(`${config.backend_url}/order/${filename}`);
       } catch (error) {
         console.error("Error fetching case and event details", error);
         app.displayError("Error fetching data", error.message);
       }
     }
     fetchData();
-  }, [selectedFile]);
+  }, [filename]);
 
   useEffect(() => {
     async function fetchFilteredContacts() {
@@ -438,9 +441,9 @@ export default function Main() {
         >
           {selectedFile && (
             <embed
-              src={URL.createObjectURL(selectedFile)}
+              src={pdfUrl} //{URL.createObjectURL(selectedFile)}
               type="application/pdf"
-              title={selectedFile.name}
+              title={filename}
               width="100%"
               height="100%"
             />
