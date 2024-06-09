@@ -15,8 +15,8 @@ export default function Home() {
   };
 
   const handleUploadFile = () => {
-    uploadFile(app.selectedFile).then((taskId) => {
-      router.push({ pathname: "/details", query: { taskId: taskId } });
+    uploadFile(app.selectedFile).then((filename) => {
+      router.push({ pathname: "/details", query: { filename: filename } });
     });
   };
 

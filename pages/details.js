@@ -41,12 +41,15 @@ import {
   getGroupMembers,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import UndoIcon from "@mui/icons-material/Undo";
 import ErrorMessage from "../components/ErrorMessage";
 import { CheckCircle } from "@mui/icons-material";
 import logo from "../public/logo.png";
 import Image from "next/image";
 import SplitButton from "../components/SplitButton";
 import { useIsAuthenticated } from "@azure/msal-react";
+import config from "../Config";
 
 const splitBtnOptions = ["Download Events", "Add to Outlook"];
 export default function Main() {
@@ -54,9 +57,11 @@ export default function Main() {
   const app = useAppContext();
   const selectedFile = app.selectedFile;
   const isAuthenticated = useIsAuthenticated();
-  const [events, setEvents] = useState([]);
+  const [pdfUrl, setPdfUrl] = useState("");
   const [eventDetails, setEventDetails] = useState([]);
   const [caseDetail, setCaseDetail] = useState(null);
+  const [doEnhance, setDoEnhance] = useState(true);
+  const [prevEvents, setPrevEvents] = useState([]);
   const [contactList, setContactList] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]);
   const [contactError, setContactError] = useState(false);
@@ -64,28 +69,29 @@ export default function Main() {
   const [isCreatable, setIsCreatable] = useState(false);
   const [caseStatus, setCaseStatus] = useState(false);
   const [eventStatus, setEventStatus] = useState("editing");
-  const taskId = router.query.taskId;
+  const filename = router.query.filename;
   const scrollRef = useRef();
 
   useEffect(() => {
     async function fetchData() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
-        const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
+        const [caseInfo, eventInfo] = await uploadFileGetEvents(filename);
         if (caseInfo && caseInfo.client) {
           setCaseStatus(true);
         } else if (caseInfo) {
           caseInfo.client = "";
         }
         setCaseDetail(caseInfo);
-        setEvents(eventInfo);
+        setEventDetails(eventInfo);
+        setPdfUrl(`${config.backend_url}/order/${filename}`);
       } catch (error) {
         console.error("Error fetching case and event details", error);
         app.displayError("Error fetching data", error.message);
       }
     }
     fetchData();
-  }, [selectedFile]);
+  }, [filename]);
 
   useEffect(() => {
     async function fetchFilteredContacts() {
@@ -176,12 +182,16 @@ export default function Main() {
 
   useEffect(() => {
     // Check if all EventDetail components are saved/disabled.
-    const isAnyEventEditable = eventDetails.some((event) => event.isEditable);
-    setIsCreatable(!isAnyEventEditable);
+    if (eventDetails) {
+      const isAnyEventEditable = eventDetails.some((event) => event.isEditable);
+      setIsCreatable(!isAnyEventEditable);
+    }
   }, [eventDetails]);
 
   const handleEventDelete = (id) => {
-    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id));
+    setEventDetails((prevEvents) =>
+      prevEvents.filter((event) => event.id !== id)
+    );
 
     setEventDetails((prevEvents) =>
       prevEvents.filter((event) => event.id !== id)
@@ -191,13 +201,13 @@ export default function Main() {
   const handleEventAdd = (event) => {
     event.preventDefault();
     const newEvent = {
-      id: events.length + 1,
+      id: eventDetails.length + 1,
       subject: "",
       description: "",
       date: new Date(),
     };
 
-    setEvents([...events, newEvent]);
+    setEventDetails([...eventDetails, newEvent]);
     setIsCreatable(false);
 
     // Scroll to the new component
@@ -205,6 +215,18 @@ export default function Main() {
       scrollRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
     }, 200);
   };
+
+  async function handleEnhanceOutput() {
+    console.log("Enhance:", doEnhance);
+    if (doEnhance) {
+      setPrevEvents(eventDetails);
+      const [_, eventInfo] = await uploadFileGetEvents(filename, true);
+      setEventDetails(eventInfo);
+    } else {
+      setEventDetails(prevEvents);
+    }
+    setDoEnhance(!doEnhance);
+  }
 
   async function removeOldEvents(calendarId) {
     try {
@@ -419,9 +441,9 @@ export default function Main() {
         >
           {selectedFile && (
             <embed
-              src={URL.createObjectURL(selectedFile)}
+              src={pdfUrl} //{URL.createObjectURL(selectedFile)}
               type="application/pdf"
-              title={selectedFile.name}
+              title={filename}
               width="100%"
               height="100%"
             />
@@ -507,8 +529,8 @@ export default function Main() {
             component="div"
             sx={{ height: "600px", overflow: "auto" }}
           >
-            {events && events.length > 0 ? (
-              events.map((entry, index) => (
+            {eventDetails && eventDetails.length > 0 ? (
+              eventDetails.map((entry, index) => (
                 <EventDetail
                   key={entry.id}
                   entry={entry}
@@ -520,9 +542,24 @@ export default function Main() {
               <CircularProgress />
             )}
           </Box>
-          <Grid marginTop={2} textAlign={"end"}>
+          <Grid
+            container
+            marginTop={2}
+            justifyContent={isAuthenticated ? "space-between" : "flex-end"}
+          >
+            {isAuthenticated ? (
+              <Tooltip title={doEnhance ? "Enhance with AI" : "Undo enhance"}>
+                <Fab
+                  size="medium"
+                  color="secondary"
+                  onClick={handleEnhanceOutput}
+                >
+                  {doEnhance ? <AutoFixHighIcon /> : <UndoIcon />}
+                </Fab>
+              </Tooltip>
+            ) : null}
             <Tooltip title="Add Event">
-              <Fab size="medium" color="secondary" onClick={handleEventAdd}>
+              <Fab size="medium" color="primary" onClick={handleEventAdd}>
                 <AddIcon />
               </Fab>
             </Tooltip>
@@ -541,7 +578,7 @@ export default function Main() {
           disableBtn={
             !isCreatable ||
             !caseStatus ||
-            !(events && events.length > 0) ||
+            !(eventDetails && eventDetails.length > 0) ||
             contactError
           }
           disableIndex={isAuthenticated ? -1 : 1}

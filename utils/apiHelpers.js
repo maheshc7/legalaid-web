@@ -4,16 +4,12 @@ import config from "../Config";
 const BASE_URL = config.backend_url;
 
 // Function to upload a file
-export async function uploadFileGetEvents(file) {
+export async function uploadFileGetEvents(filename, doEnhance = false) {
   try {
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const response = await axios.post(`${BASE_URL}/upload`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await axios.get(
+      `${BASE_URL}/order-details?filename=${filename}`,
+      { headers: { "Is-Authorized": String(doEnhance) } }
+    );
 
     if (response.status === 200) {
       return [response.data.case, response.data.events];
@@ -30,21 +26,14 @@ export async function uploadFileGetEvents(file) {
 // Function to upload a file
 export async function uploadFile(file) {
   try {
-    const formData = new FormData();
-    formData.append("file", file);
+    const response = await axios.put(`${BASE_URL}/order/${file.name}`, file, {
+      headers: {
+        "Content-Type": "application/pdf",
+      },
+    });
 
-    const response = await axios.post(
-      `https://virtserver.swaggerhub.com/maheshc7/legalAid/1.0.0/upload`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-
-    if (response.status === 201) {
-      return response.data.taskID;
+    if (response.status === 200) {
+      return file.name;
     } else {
       throw new Error("Failed to upload file");
     }

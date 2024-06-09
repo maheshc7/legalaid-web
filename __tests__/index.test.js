@@ -50,8 +50,8 @@ test("handles file selection and upload", async () => {
   });
 
   // Mock the uploadFile function to return a taskId
-  const mockTaskId = "mocked-task-id";
-  apiHelpers.uploadFile.mockResolvedValue(mockTaskId);
+  const mockFileName = "mocked-filename";
+  apiHelpers.uploadFile.mockResolvedValue(mockFileName);
 
   const { rerender } = render(<Home />);
 
@@ -83,6 +83,6 @@ test("handles file selection and upload", async () => {
 
   expect(mockPush).toHaveBeenCalledWith({
     pathname: "/details",
-    query: { taskId: mockTaskId },
+    query: { filename: mockFileName },
   });
 });
