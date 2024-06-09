@@ -28,7 +28,7 @@ jest.mock("next/router", () => ({
 
 const mockPush = jest.fn();
 useRouter.mockReturnValue({
-  query: { taskId: "mock-task-id" },
+  query: { filename: "mock-file" },
   push: mockPush,
 });
 
@@ -114,6 +114,27 @@ describe("Main Component", () => {
     render(<Main />);
   });
 
+  it("should display an error message when fetching data fails", async () => {
+    const mockError = new Error("Failed to fetch data");
+    apiHelpers.uploadFileGetEvents.mockRejectedValueOnce(mockError); // Mock the API function to reject with an error
+
+    // Render the component containing the useEffect hook
+    await act(async () => {
+      render(<Main />);
+    });
+
+    // Wait for the component to render and the useEffect hook to execute
+    // Since the useEffect hook is asynchronous, you might need to wait for some time or use async/await
+    // Then, assert that the error message is displayed
+    // You might also need to adjust the selector depending on how the error message is rendered in your component
+    // await screen.findByText("Error fetching data");
+
+    expect(mockAppContext.displayError).toHaveBeenCalledWith(
+      "Error fetching data",
+      mockError.message
+    );
+  });
+
   it("should display loading indicators for case details and events", async () => {
     apiHelpers.uploadFileGetEvents.mockResolvedValueOnce([null, null]);
     await act(async () => {
@@ -183,6 +204,20 @@ describe("Event Handling and Export", () => {
 
   afterAll(() => {
     jest.useRealTimers(); // Restore real timers after all tests are done
+  });
+
+  it("should get enhanced output", async () => {
+    useIsAuthenticated.mockReturnValue(true);
+    await act(async () => {
+      render(<Main />);
+    });
+    const addEventButton = screen.getByLabelText("Add Event");
+    fireEvent.click(addEventButton);
+
+    const enhanceButton = await screen.findByLabelText("Enhance with AI");
+    fireEvent.click(enhanceButton);
+
+    expect(apiHelpers.uploadFileGetEvents).toBeCalledWith("mock-file", true);
   });
 
   it("should add events correctly", async () => {

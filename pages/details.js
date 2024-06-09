@@ -220,7 +220,7 @@ export default function Main() {
     console.log("Enhance:", doEnhance);
     if (doEnhance) {
       setPrevEvents(eventDetails);
-      const [_, eventInfo] = await uploadFileGetEvents(selectedFile, true);
+      const [_, eventInfo] = await uploadFileGetEvents(filename, true);
       setEventDetails(eventInfo);
     } else {
       setEventDetails(prevEvents);
@@ -545,10 +545,10 @@ export default function Main() {
           <Grid
             container
             marginTop={2}
-            justifyContent={!isAuthenticated ? "space-between" : "flex-end"}
+            justifyContent={isAuthenticated ? "space-between" : "flex-end"}
           >
-            {!isAuthenticated && (
-              <Tooltip title={doEnhance ? "Enahnce with AI" : "Undo enhance"}>
+            {isAuthenticated ? (
+              <Tooltip title={doEnhance ? "Enhance with AI" : "Undo enhance"}>
                 <Fab
                   size="medium"
                   color="secondary"
@@ -557,7 +557,7 @@ export default function Main() {
                   {doEnhance ? <AutoFixHighIcon /> : <UndoIcon />}
                 </Fab>
               </Tooltip>
-            )}
+            ) : null}
             <Tooltip title="Add Event">
               <Fab size="medium" color="primary" onClick={handleEventAdd}>
                 <AddIcon />
