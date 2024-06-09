@@ -2,16 +2,19 @@
 // Licensed under the MIT License.
 
 import { Alert, AlertTitle } from "@mui/material";
+import { useEffect } from "react";
 import { useAppContext } from "../context/AppContext";
 
 // <ErrorMessageSnippet>
 
-export default function ErrorMessage({home}) {
+export default function ErrorMessage({ home }) {
   const app = useAppContext();
 
-  if(home) {
-    app.clearError()
-  }
+  useEffect(() => {
+    if (home) {
+      app.clearError();
+    }
+  }, [home, app]);
   if (app.error && !home) {
     return (
       <Alert

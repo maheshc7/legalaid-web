@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Box, Button, Container, Typography } from "@mui/material";
 import { styled } from "@mui/system";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import { useAppContext } from "../context/AppContext";
 
 const FileInput = styled("input")({
   display: "none",
@@ -54,7 +53,6 @@ function FileUpload({ selectedFile, onUpload, onSelect }) {
   const handleSelectFile = (e) => {
     const file = e.target.files[0];
     if (file.type === "application/pdf") {
-      console.log("Calling on Select");
       onSelect(file);
       setError("");
     } else {
@@ -64,7 +62,7 @@ function FileUpload({ selectedFile, onUpload, onSelect }) {
   };
 
   const handleUploadFile = () => {
-    if (selectedFile) {
+    if (selectedFile && selectedFile.type === "application/pdf") {
       onUpload();
     } else {
       setError("Please select a PDF file.");
@@ -74,7 +72,7 @@ function FileUpload({ selectedFile, onUpload, onSelect }) {
   const handleDropFile = (e) => {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file.type === "application/pdf") {
+    if (file && file.type === "application/pdf") {
       onSelect(file);
       setError("");
     } else {
@@ -106,9 +104,11 @@ function FileUpload({ selectedFile, onUpload, onSelect }) {
         onDrop={handleDropFile}
         onDragOver={handleDragOver}
         onClick={() => document.getElementById("fileInput").click()}
+        data-testid="drop zone"
       >
         <FileInput
           id="fileInput"
+          data-testid="file input"
           type="file"
           accept=".pdf"
           onChange={handleSelectFile}
@@ -148,6 +148,7 @@ function FileUpload({ selectedFile, onUpload, onSelect }) {
         size="large"
         onClick={handleUploadFile}
         disabled={!selectedFile}
+        data-testid="upload btn"
       >
         Upload
       </Button>

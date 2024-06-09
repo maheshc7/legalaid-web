@@ -23,56 +23,75 @@ import Layout from "../components/Layout.js";
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useState, useEffect, useRef } from "react";
-import { uploadFileGetEvents } from "../utils/apiHelpers";
+import {
+  uploadFileGetEvents,
+  generateICSContent,
+  downloadICSFile,
+} from "../utils/apiHelpers";
 import {
   getFilteredContacts,
-  getCalendar,
-  shareCalendar,
-  postEventsBatch,
+  getOrCreateCalendar,
+  updateCalendar,
+  postEvents,
   getAppEvents,
-  deleteEventsBatch,
+  deleteEvents,
+  getGroup,
+  addGroupMembers,
+  postGroup,
+  getGroupMembers,
 } from "../utils/authService";
 import AddIcon from "@mui/icons-material/Add";
+import AutoFixHighIcon from "@mui/icons-material/AutoFixHigh";
+import UndoIcon from "@mui/icons-material/Undo";
 import ErrorMessage from "../components/ErrorMessage";
 import { CheckCircle } from "@mui/icons-material";
 import logo from "../public/logo.png";
 import Image from "next/image";
 import SplitButton from "../components/SplitButton";
 import { useIsAuthenticated } from "@azure/msal-react";
+import config from "../Config";
 
 const splitBtnOptions = ["Download Events", "Add to Outlook"];
-const singleValueExtendedProperty = {id: "String {66f5a359-4659-4830-9070-00050ec6ac6e} Name Source", value: "LegalAid"}
 export default function Main() {
   const router = useRouter();
   const app = useAppContext();
   const selectedFile = app.selectedFile;
   const isAuthenticated = useIsAuthenticated();
-  const [events, setEvents] = useState([]);
+  const [pdfUrl, setPdfUrl] = useState("");
   const [eventDetails, setEventDetails] = useState([]);
   const [caseDetail, setCaseDetail] = useState(null);
+  const [doEnhance, setDoEnhance] = useState(true);
+  const [prevEvents, setPrevEvents] = useState([]);
   const [contactList, setContactList] = useState([]);
   const [selectedContacts, setSelectedContacts] = useState([]);
   const [contactError, setContactError] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatable, setIsCreatable] = useState(false);
+  const [caseStatus, setCaseStatus] = useState(false);
   const [eventStatus, setEventStatus] = useState("editing");
-  const taskId = router.query.taskId;
-  const scrollRef = useRef(null);
+  const filename = router.query.filename;
+  const scrollRef = useRef();
 
   useEffect(() => {
     async function fetchData() {
       try {
         // const [caseInfo, eventInfo] = await Promise.all([getCaseDetails(taskId), getEvents(taskId)]);
-        const [caseInfo, eventInfo] = await uploadFileGetEvents(selectedFile);
+        const [caseInfo, eventInfo] = await uploadFileGetEvents(filename);
+        if (caseInfo && caseInfo.client) {
+          setCaseStatus(true);
+        } else if (caseInfo) {
+          caseInfo.client = "";
+        }
         setCaseDetail(caseInfo);
-        setEvents(eventInfo);
+        setEventDetails(eventInfo);
+        setPdfUrl(`${config.backend_url}/order/${filename}`);
       } catch (error) {
-        console.error("Error fetching case and event details",error);
+        console.error("Error fetching case and event details", error);
         app.displayError("Error fetching data", error.message);
       }
     }
     fetchData();
-  }, [selectedFile]);
+  }, [filename]);
 
   useEffect(() => {
     async function fetchFilteredContacts() {
@@ -93,6 +112,32 @@ export default function Main() {
     }
   }, [searchQuery]);
 
+  useEffect(() => {
+    async function updateContactList() {
+      let groupId = await getGroup(app.authProvider, caseDetail.caseNum);
+
+      if (groupId) {
+        const memberList = await getGroupMembers(app.authProvider, groupId);
+        setSelectedContacts((prevContacts) => [
+          ...prevContacts,
+          ...memberList.filter(
+            (member) =>
+              !prevContacts.some(
+                (contact) => contact.address === member.address
+              )
+          ),
+        ]);
+      }
+    }
+    if (caseDetail && app.user?.isOrg) {
+      updateContactList();
+    }
+  }, [caseDetail?.caseNum]);
+
+  async function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   const validateEmail = (email) => {
     // Regular expression for email validation
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -106,7 +151,7 @@ export default function Main() {
       const newEmail = value.pop();
       setSelectedContacts([
         ...selectedContacts,
-        { name: newEmail, address: newEmail },
+        { id: "", name: newEmail, address: newEmail },
       ]);
       if (!validateEmail(newEmail)) {
         setContactError(true);
@@ -137,12 +182,16 @@ export default function Main() {
 
   useEffect(() => {
     // Check if all EventDetail components are saved/disabled.
-    const isAnyEventEditable = eventDetails.some((event) => event.isEditable);
-    setIsCreatable(!isAnyEventEditable);
+    if (eventDetails) {
+      const isAnyEventEditable = eventDetails.some((event) => event.isEditable);
+      setIsCreatable(!isAnyEventEditable);
+    }
   }, [eventDetails]);
 
   const handleEventDelete = (id) => {
-    setEvents((prevEvents) => prevEvents.filter((event) => event.id !== id));
+    setEventDetails((prevEvents) =>
+      prevEvents.filter((event) => event.id !== id)
+    );
 
     setEventDetails((prevEvents) =>
       prevEvents.filter((event) => event.id !== id)
@@ -152,98 +201,81 @@ export default function Main() {
   const handleEventAdd = (event) => {
     event.preventDefault();
     const newEvent = {
-      id: events.length + 1,
+      id: eventDetails.length + 1,
       subject: "",
       description: "",
       date: new Date(),
     };
 
-    setEvents([...events, newEvent]);
+    setEventDetails([...eventDetails, newEvent]);
     setIsCreatable(false);
 
     // Scroll to the new component
-    const newEventRef = scrollRef.current.lastElementChild;
-    newEventRef.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => {
+      scrollRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    }, 200);
   };
+
+  async function handleEnhanceOutput() {
+    console.log("Enhance:", doEnhance);
+    if (doEnhance) {
+      setPrevEvents(eventDetails);
+      const [_, eventInfo] = await uploadFileGetEvents(filename, true);
+      setEventDetails(eventInfo);
+    } else {
+      setEventDetails(prevEvents);
+    }
+    setDoEnhance(!doEnhance);
+  }
 
   async function removeOldEvents(calendarId) {
     try {
-      const oldEventsId = await getAppEvents(app.authProvider, calendarId, singleValueExtendedProperty);
-      await deleteEventsBatch(app.authProvider, calendarId, oldEventsId);
+      const oldEventsId = await getAppEvents(
+        app.authProvider,
+        calendarId,
+        caseDetail.caseNum
+      );
+      await deleteEvents(app.authProvider, calendarId, oldEventsId);
     } catch (err) {
-      app.displayError("Error removing old events", err);
+      app.displayError("Error removing old events", err.message);
     }
   }
 
-  async function createEvents(calendarId) {
-    setIsCreatable(false);
-    setEventStatus("processing");
+  async function shareCalendar(calendarId) {
     try {
-      const attendees = selectedContacts.map((contact) => ({
-        emailAddress: {
-          address: contact.address,
-          name: contact.name,
-        },
-        type: "required",
-      }));
-
       if (selectedContacts.length) {
         const calendarPermission = selectedContacts.map((contact) => ({
           emailAddress: {
             name: contact.name,
             address: contact.address,
           },
-          role: "write", // Set the desired role for all contacts
+          role: "write",
         }));
 
-        const calendarResponse = await shareCalendar(
+        const calendarResponse = await updateCalendar(
           calendarId,
           calendarPermission
         );
-
       }
-      console.log("User Timezone: ", app.user.timeZone);
-      var batchRequests = eventDetails.map((newEvent) => {
-        const dateOnly = newEvent.date.format("YYYY-MM-DD") + " 00:00:00";
-        var startDate = new Date(dateOnly);
-        var endDate = new Date(dateOnly);
-        endDate.setDate(endDate.getDate() + 1);
-        const newDescription =
-          newEvent.description + "\n\n\n\n {Event created by: LegalAid}";
-        const eventPayload = {
-          subject: newEvent.subject,
-          body: {
-            contentType: "Text",
-            content: newDescription,
-          },
-          start: {
-            dateTime: dateOnly,
-            timeZone: app.user.timeZone,
-          },
-          end: {
-            dateTime: endDate.toISOString().split("T")[0]+" 00:00:00",
-            timeZone: app.user.timeZone,
-          },
-          isAllDay: true,
-          singleValueExtendedProperties: [singleValueExtendedProperty] //unique identifier for events created by the LegalAid app.
-          // attendees: attendees, //commenting for now. Attendees get invite to the calendar.
-          // other event details
-        };
+    } catch (error) {
+      app.displayError("Error sharing calendar ", error.message);
+    }
+  }
 
-        return {
-          id: newEvent.id, // Unique identifier for the request
-          method: "POST",
-          url: `/me/calendars/${calendarId}/events`,
-          body: eventPayload,
-          headers: {
-            "Content-Type": "application/json",
-            // "Prefer": `IdType="ImmutableId"`,
-          },
-          transactionId: caseDetail.caseNum, //what if they run again and it fails? Do the previous events get removed? Should be sent in batch
-        };
-      });
+  async function createEvents(calendarId, attendeeList) {
+    setIsCreatable(false);
+    setEventStatus("processing");
 
-      postEventsBatch(app.authProvider, batchRequests);
+    try {
+      await postEvents(
+        app.authProvider,
+        app.user.timeZone,
+        eventDetails,
+        attendeeList,
+        calendarId,
+        caseDetail
+      );
+      // TODO: do we call postEvents again if it fails?
       //after successfully creating events.
       setEventStatus("success");
       setTimeout(() => {
@@ -252,89 +284,83 @@ export default function Main() {
     } catch (err) {
       setIsCreatable(true);
       setEventStatus("editing");
-      app.displayError("Error creating event", err);
+      app.displayError("Error creating event", err.message);
     }
   }
 
-  const generateICSContent = (events) => {
-    let icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-CALSCALE:GREGORIAN
-METHOD:PUBLISH
-X-WR-CALNAME:${caseDetail.caseNum}`;
-
-//If user has logged in, then we can add the timezone
-    if (app.user && app.user.timeZone){
-      icsContent +=`
-X-WR-TIMEZONE:${app.user.timezone}`;
-    }
-
-    events.forEach((eventDetails) => {
-      const dateOnly = eventDetails.date.format("YYYY-MM-DD") + " 00:00:00";
-      var startDate = new Date(dateOnly);
-      var endDate = new Date(dateOnly);
-      endDate.setDate(endDate.getDate() + 1);
-      const newDescription =
-        eventDetails.description + "\n\n\n\n {Event created by: LegalAid}";
-
-      icsContent += `
-BEGIN:VEVENT
-UID:${eventDetails.id}
-DTSTART:${startDate.toISOString().substring(0, 10).replaceAll("-", "")}
-DTEND:${endDate.toISOString().substring(0, 10).replaceAll("-", "")}
-SUMMARY:${eventDetails.subject}
-DESCRIPTION:${newDescription}
-END:VEVENT`;
-    });
-
-    icsContent += "\nEND:VCALENDAR";
-    return icsContent;
-  };
-
-  const downloadICSFile = (icsContent, fileName) => {
-    const blob = new Blob([icsContent], {
-      type: "text/calendar;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-  };
-
   const handleExportICS = () => {
-    const icsContent = generateICSContent(eventDetails);
+    const icsContent = generateICSContent(app, eventDetails, caseDetail);
     downloadICSFile(icsContent, `Case_${caseDetail.caseNum}_Calendar.ics`);
   };
 
   async function handleSplitButtonClick(index) {
     switch (index) {
-      case 0:
+      case 0: //Download ICS File
         handleExportICS();
         break;
 
-      case 1:
-        try{
-          const calendar = await getCalendar(
-            app.authProvider,
-            caseDetail.caseNum
-          );
-    
-          if(!calendar.isNew){
-            //If calendar exists already, delete old events created by LegalAid (if any)
-            await removeOldEvents(calendar.id);
-          }
-          await createEvents(calendar.id);
+      case 1: //Add to Outlook
+        try {
+          console.log(app.user);
+          let calendar = {},
+            url;
+          //Add user as the attendee as well to get the events in their main calendar
+          let attendeeList = selectedContacts;
+          let userContact = {
+            id: app.user.id,
+            name: app.user.displayName,
+            address: app.user.email,
+          };
+          attendeeList.push(userContact);
 
+          if (app.user.isOrg) {
+            let groupId = await getGroup(app.authProvider, caseDetail.caseNum);
+
+            calendar.isOwner = false;
+            calendar.isNew = false;
+
+            if (groupId) {
+              addGroupMembers(app.authProvider, groupId, attendeeList);
+            } else {
+              groupId = await postGroup(
+                app.authProvider,
+                caseDetail.caseNum,
+                attendeeList
+              );
+              calendar.isNew = true;
+              await delay(2000);
+            }
+
+            url = `/groups/${groupId}`;
+          } else if (app.user.isOrg == false) {
+            calendar = await getOrCreateCalendar(
+              app.authProvider,
+              caseDetail.caseNum,
+              app.user.email
+            );
+            url = `/me/calendars/${calendar.id}`;
+          } else {
+            console.error("isOrg variable is not definied", app.user.isOrg);
+            break;
+          }
+
+          if (!calendar.isNew) {
+            //If calendar exists already, delete old events created by LegalAid (if any)
+            await removeOldEvents(url);
+          }
+
+          if (calendar.isOwner) {
+            await shareCalendar(calendar.id);
+          }
+
+          await createEvents(url, attendeeList);
         } catch (err) {
-          app.displayError("Error Getting Calendar", err);
+          app.displayError("Error Getting Calendar", err.message);
         }
         break;
 
       default:
-        console.log("Invalid option");
+        console.error("Invalid option");
     }
   }
 
@@ -415,9 +441,9 @@ END:VEVENT`;
         >
           {selectedFile && (
             <embed
-              src={URL.createObjectURL(selectedFile)}
+              src={pdfUrl} //{URL.createObjectURL(selectedFile)}
               type="application/pdf"
-              title={selectedFile.name}
+              title={filename}
               width="100%"
               height="100%"
             />
@@ -430,7 +456,7 @@ END:VEVENT`;
               <Autocomplete
                 multiple
                 freeSolo
-                filterSelectedOptions //
+                filterSelectedOptions
                 options={contactList}
                 value={selectedContacts}
                 renderTags={(value, getTagProps) =>
@@ -478,13 +504,18 @@ END:VEVENT`;
             ) : null}
 
             <Box
+              data-testid="case-detail"
               border={1}
               borderColor={"grey.400"}
               borderRadius={1.5}
               padding={1}
             >
               {caseDetail ? (
-                <CaseDetails caseDetail={caseDetail} updateCaseDetail={setCaseDetail} />
+                <CaseDetails
+                  caseDetail={caseDetail}
+                  updateCaseDetail={setCaseDetail}
+                  allowPost={setCaseStatus}
+                />
               ) : (
                 <CircularProgress />
               )}
@@ -494,13 +525,12 @@ END:VEVENT`;
 
         <Grid sm={12} md={6} lg={3}>
           <Box
-            id="event_box"
-            ref={scrollRef}
+            data-testid="event_box"
             component="div"
             sx={{ height: "600px", overflow: "auto" }}
           >
-            {events && events.length > 0 ? (
-              events.map((entry, index) => (
+            {eventDetails && eventDetails.length > 0 ? (
+              eventDetails.map((entry, index) => (
                 <EventDetail
                   key={entry.id}
                   entry={entry}
@@ -512,9 +542,24 @@ END:VEVENT`;
               <CircularProgress />
             )}
           </Box>
-          <Grid marginTop={2} textAlign={"end"}>
+          <Grid
+            container
+            marginTop={2}
+            justifyContent={isAuthenticated ? "space-between" : "flex-end"}
+          >
+            {isAuthenticated ? (
+              <Tooltip title={doEnhance ? "Enhance with AI" : "Undo enhance"}>
+                <Fab
+                  size="medium"
+                  color="secondary"
+                  onClick={handleEnhanceOutput}
+                >
+                  {doEnhance ? <AutoFixHighIcon /> : <UndoIcon />}
+                </Fab>
+              </Tooltip>
+            ) : null}
             <Tooltip title="Add Event">
-              <Fab size="medium" color="secondary" onClick={handleEventAdd}>
+              <Fab size="medium" color="primary" onClick={handleEventAdd}>
                 <AddIcon />
               </Fab>
             </Tooltip>
@@ -530,7 +575,12 @@ END:VEVENT`;
         <SplitButton
           options={splitBtnOptions}
           onClick={handleSplitButtonClick}
-          disableBtn={!isCreatable || events.length <= 0 || contactError}
+          disableBtn={
+            !isCreatable ||
+            !caseStatus ||
+            !(eventDetails && eventDetails.length > 0) ||
+            contactError
+          }
           disableIndex={isAuthenticated ? -1 : 1}
         />
       </Stack>
